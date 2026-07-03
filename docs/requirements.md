@@ -1,8 +1,8 @@
 # 要求定義書 — ModernBERT日本語G2P
 
-**バージョン:** 1.3
-**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映 / v1.3 haqumei深掘り反映)
-**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)、および **haqumei徹底解剖 (v0.8.0 コード全体)** に基づく「rule天井」判定
+**バージョン:** 1.4
+**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映 / v1.3 haqumei深掘り反映 / v1.4 プロソディ出力形式拡張)
+**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)、**haqumei徹底解剖 (v0.8.0 コード全体)** に基づく「rule天井」判定、および **haqumei ProsodyFormat 3種類 (Default/Prefix/Numeric) + g2p_mapping_prosody API の実測動作確認**
 **ステータス:** **Phase 0 開始可** (v1.2 で全 blocker 解決)
 
 ---
@@ -84,9 +84,31 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
   - **カタカナ外来語** (コンピュータ、アプリ、コーヒー)
   - **絵文字・機種依存文字** (Phase 1 の正規化で除去/置換対象)
 - **FR-02** [MUST]: 入力テキストに対して JULIUS音素セット準拠の音素列を出力する ([05設計 §4.1])
-- **FR-03** [MUST]: 各モーラに対してアクセント記号 (H / L) を付与した出力を提供する
-- **FR-04** [MUST]: アクセント句境界マーカ ('/') を含む出力形式を提供する
+- **FR-03** [MUST] (**v1.4 拡張**): 各モーラに対してアクセント記号 (H / L) を付与した出力を提供する。**アクセント (単語レベル) + イントネーション (文レベル) を1つのシーケンスに統合する**
+- **FR-04** [MUST] (**v1.4 拡張**): アクセント句境界マーカを含む出力形式を提供する。以下の記号を canonical にサポート:
+  - `^` : 文頭 (BOS)
+  - `$` : 文末 (EOS)
+  - `#` : アクセント句境界 (intonation phrase boundary)
+  - `[` : アクセント句開始 / pitch 上昇位置 (L→H)
+  - `]` : アクセント核 / pitch 下降位置 (H→L)
+  - `?` : 疑問文の上昇イントネーション
+  - **haqumei の `ProsodyFormat` と互換にする** (tdmelodic 記法, 実物確認済み)
+- **FR-04a** [MUST] (**v1.4 追加**): 以下の**3種類の出力フォーマット**をサポート (haqumei と同じ設計)
+  - **tdmelodic 風**: `['^', 'ky', 'o', ']', 'o', 'w', 'a', '#', 'a', ']', 'm', 'e', 'd', 'a', '$']`
+  - **Prefix (L_/H_)**: 各音素に `L_` / `H_` プレフィックス — 例: `['H_ky', 'H_o', 'L_o', ...]`
+  - **Numeric (:0/:1)**: 各音素に `:0` / `:1` サフィックス — 例: `['ky:1', 'o:1', 'o:0', ...]`
+- **FR-04b** [MUST] (**v1.4 追加**): **単語単位 API** を提供 (haqumei の `g2p_mapping_prosody` 相当) — 各単語について:
+  - `accent_nucleus`: アクセント核位置 (数値、0=平板、1=頭高等)
+  - `mora_count`: モーラ数
+  - `chain_flag`: アクセント句連結フラグ (-1=独立/新句頭, 0=連結中止, 1=連結継続) — **イントネーション句境界の制御信号**
+  - `chain_rule`: 連結規則 ("C1" / "動詞%F2@0" 等)
+  - `pos` / `pos_group1〜3`: 品詞細分類 (固有名詞判定等に必要)
+  - `pron`: カタカナ発音
 - **FR-05** [SHOULD]: X-SAMPA、カタカナ音素表記への変換ユーティリティを提供する
+- **FR-05a** [SHOULD] (**v1.4 追加**): 疑問文以外の**プロソディ・イベント**もサポート:
+  - 感嘆文 (!) の下降強調
+  - 引用境界 (「」内) の pitch reset
+  - 明示的な pause 挿入 (、。「,」「.」)
 
 ### 2.1a 多言語混在文の扱い (**新規追加**)
 
@@ -519,6 +541,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 | 1.1 | 2026-07-03 | 追加調査(A計算コスト実測・B先行研究Ablation) を反映して10領域を補強。**国際化スコープの明示** / **バージョニング(SemVer)** / **Ablation具体化(NFR-33〜38)** / **計算コスト規定(NFR-60〜64)** / **性能回帰CI(NFR-70〜73)** / **段階リリース(α→β→1.0)** / **悪用防止・コンプライアンス** / **依存関係バージョン明示** / **pyopenjtalk互換テスト(FR-35)** / **多言語混在対応をMoSCoW MUSTに昇格** | (Phase 0 前に確定要) |
 | **1.2** | **2026-07-03** | **Phase 0 blocker 5件の並列調査結果を反映して OPEN-01〜05 のうち4件を解決**。(1) OPEN-01=✅JVS-3000 は CyberAgent AI Lab GitHub で公開、(2) OPEN-02=✅Wikipedia CC-BY-SA-4.0 は先例あり Apache-2.0 weights で配布可 (Japanese StableLM/LLM-jp-3 先例)、(3) OPEN-05=✅**ライセンスを Apache-2.0 に確定**、(4) JSUT テキストが CC-BY-SA-4.0 と判明 → eval only 分離を CR-24 で強制、(5) JMDict は runtime lookup のみ許可 (CR-23)、(6) Vast.ai を primary クラウドに確定 (RTX 4090 primary, RTX 3090 fallback)、(7) Hard-set キュレーションは LLM半自動 (C案) を primary手法に確定 | **Phase 0 開始可** |
 | **1.3** | **2026-07-03** | **haqumei v0.8.0 徹底解剖の結果を反映**。(1) **haqumei は "rule 天井"** — PER 1.17% の 80-90% は pyopenjtalk-plus 辞書由来、NN 由来はわずか 0-5% (Kanalizerは英単語遭遇時のみ発火)、(2) 攻撃ポイント FR-50〜54 追加 (BAS / polyphone / 略語判定 / 未知語処理 / mora accuracy 公表)、(3) haqumei-eval と同一プロトコル評価スクリプト実装を CR-27 で強制、(4) pyopenjtalk-plus 辞書採用を CR-26 で primary辞書として確定、(5) haqumei との並走 CI を CR-28 で追加、(6) 弱点カテゴリ (多音字/略語/固有名詞/連続変異) で haqumei に対し 0.5pt 以上の差をつけることを NFR-17 で強制、(7) mora accent accuracy を独自公表指標として NFR-07 に追加 (haqumei 非公表領域で情報優位) | Phase 0 開始可 |
+| **1.4** | **2026-07-03** | **プロソディ出力形式を拡張**。haqumei ProsodyFormat 実測動作確認に基づき、(1) FR-03 を「アクセント + イントネーション を1つのシーケンスに統合」に拡張、(2) FR-04 に canonical記号セット (`^` `$` `#` `[` `]` `?`) を明示、(3) FR-04a: 3種類の出力フォーマット (tdmelodic 風 / Prefix `L_H_` / Numeric `:0:1`) の MUST サポートを追加、(4) FR-04b: 単語単位 API (accent_nucleus, chain_flag, chain_rule, pos 等) の MUST サポートを追加、(5) FR-05a: 疑問文 `?` / 感嘆 / 引用境界 / pause 挿入 の SHOULD サポートを追加。**アクセントとイントネーションの両方を同時出力できる要件を明文化** | Phase 0 開始可 |
 
 ---
 
