@@ -1,9 +1,9 @@
 # 要求定義書 — ModernBERT日本語G2P
 
-**バージョン:** 1.1
-**作成日:** 2026-07-03 (v1.0 初版) / 2026-07-03 (v1.1 補強)
-**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果と、追加調査 (計算コスト実測 / Ablation先行研究) の反映
-**ステータス:** ドラフト (Phase 0 開始前の確定を要する)
+**バージョン:** 1.2
+**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映)
+**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、および Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)
+**ステータス:** **Phase 0 開始可** (v1.2 で全 blocker 解決)
 
 ---
 
@@ -216,7 +216,12 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **NFR-60** [MUST]: **単一 GPU 24GB** (RTX 4090 / L4 / A5000 / A10G 等) で fine-tune 1 run が完走できる設定を primary configuration とする
   - 想定: seq_len=1024, batch_size=16〜32, bf16 + Flash Attention 2, gradient accumulation=2〜4
   - 想定 GPU 時間: **1 run あたり 5〜10 GPU-hours** (100万文 × 3 epochs, マルチタスク5head)
-- **NFR-61** [MUST]: **全 Ablation (40〜60 runs) の総 GPU コストが US$100 以下**で完結する見積り (RunPod Community RTX 4090 $0.34/hr 基準で $70〜$200 予算内)
+- **NFR-61** [MUST] (**v1.2 で Vast.ai 実相場に更新**): **全 Ablation (40〜60 runs) の総 GPU コストが US$100 以下**で完結する見積り
+  - **primary クラウド: Vast.ai** (2026-07 実測)
+  - **primary GPU: RTX 4090 24GB** — 最安 $0.14/hr, p50 $0.35/hr, 50+ offers 利用可能
+  - **fallback GPU: RTX 3090 24GB** — 最安 $0.116/hr, p50 $0.149/hr, より安定・大量供給
+  - 予算試算: 60 runs × 8h = 480 GPU-hours → RTX 4090 最安 $67 / p50 $170 / RTX 3090 最安 $56
+  - CI check: Vast.ai の在庫が枯渇した場合 RunPod Community に自動フォールバック
 - **NFR-62** [SHOULD]: DeepSpeed / FSDP / ZeRO 等の分散学習は使用しない (130m は分散不要の閾値以下)
 - **NFR-63** [MAY]: 310m variant の Ablation では LoRA (r=16, alpha=32) を primary、full fine-tune を Ablation対照とする (メモリ節約率 20〜30%)
 - **NFR-64** [MUST]: **学習を open reproducible にする** — 各 run の hyperparameter, seed, GPU 種別, 実測時間, 実測 VRAM 使用量を `experiments/logs/` に永続化
@@ -241,29 +246,45 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 ### 4.2 データ
 
-- **CR-10** [MUST]: 学習データは以下から構築する ([03 §5.1]):
-  - pyopenjtalk-plus 辞書
-  - UniDic全エントリ
-  - Wikipedia日本語版 ふりがな抽出
-  - 青空文庫 ふりがな付きテキスト
-  - JSUT Basic5000 (evaluation held-out 500文除く)
-- **CR-11** [MUST]: JVS nonpara30 subset の 3,000文 (Koriyama benchmark) は評価専用に固定、学習に混入させない
+- **CR-10** [MUST] (**v1.2 で更新**): 学習データは以下から構築する ([03 §5.1]):
+  - pyopenjtalk-plus 辞書 (MIT + Modified BSD)
+  - UniDic 全エントリ (BSD-New)
+  - Wikipedia日本語版 ふりがな抽出 (CC-BY-SA-4.0, 法的立場を Model Card 記載)
+  - 青空文庫 ふりがな付きテキスト (public domain)
+  - **llm-jp-corpus** (Apache-2.0) — v1.2 で追加
+  - ⚠️ **JSUT Basic5000 は学習データから完全除外** (v1.2 で CC-BY-SA-4.0 判明のため評価専用)
+- **CR-11** [MUST] (**v1.2 で URL 追加**): JVS-3000 nonpara subset (Koriyama Interspeech 2026 benchmark) は評価専用に固定、学習に混入させない
+  - 入手経路: `git clone https://github.com/CyberAgentAILab/jvs_nonpara_kana`
+  - データ実体: `jvs_nonpara_kana.csv` (3,000文の手動アノテート kana)
+  - 評価: 同梱の `eval_cer.py` を直接パイプラインに組み込む (長音記号バリアント正規化ロジック込み)
 - **CR-12** [MUST]: 全データをJSONスキーマに正規化し `data/processed/` に保存する ([06 §Phase 1])
 - **CR-13** [MUST]: 数詞 / 固有名詞 (漢字/カタカナ) / 助数詞語 / 外来語 のサンプルには `sample_weight = 2.0` を適用する ([03 §7])
-- **CR-14** [MUST]: **7カテゴリ (多音字/助数詞/固有名詞/カタカナ外来語/数詞・単位/英単語混在文/英字略語) 各200文のhard-setをPhase 1中に人手キュレーションする**
+- **CR-14** [MUST] (**v1.2 で手法を確定**): **7カテゴリ (多音字/助数詞/固有名詞/カタカナ外来語/数詞・単位/英単語混在文/英字略語) 各200文=計1,400文の hard-set を Phase 1 中にキュレーションする**
+  - **primary手法: LLM半自動 + 人手 diff review (C案)** — Claude Opus 4.6 / Gemini 3.1 Pro / pyopenjtalk / UniDic の 3〜4-way diff で「発散セル」のみ人手 review。API費 < ¥5,000, 実効 12〜25h (2〜4営業日)
+  - **根拠**: Koriyama Interspeech 2026 で Claude Opus 4.6 が JVS-3000 kana CER 0.52% を達成 → LLM 出力を正解候補として扱う運用が学術的に成立
+  - **Phase 0 開始前の必須事前作業**: **カテゴリ別 seed set 20文 × 7カテゴリ = 140文** の gold ラベルを開発者自身で手作業で作成 (LLM 校正精度の Cohen's kappa 測定 baseline)
+  - **品質保証**: (a) 3〜4-way diff で発散セルのみ精査、(b) JGLUE 式 majority-vote (LLM 複数モデル)、(c) 最終公開版は音声学専門家 (東工大郡山研 / 東大齋藤研 系) に 100文サンプル監修依頼 (謝金 ¥3〜5万想定)
 - **CR-15** [MUST]: 学習データに英単語混在パターンを **最低5万文** 含める (Wikipedia日本語版のtech関連記事、GitHub日本語READMEクローリング等)
 - **CR-16** [MUST]: 英単語 → カタカナ音写辞書 (Kanalizer + CMUdict派生等) を Phase 1 で整備し、Strategy A のフォールバック用リソースとして固定する
 
 ### 4.3 ライセンス
 
-- **CR-20** [MUST]: 公開モデル weights のライセンスは商用配布可能とする (MIT または Apache-2.0を第一候補)
-- **CR-21** [MUST]: 学習データソースのライセンス条項を尊重する ([03 §6]):
-  - JSUT音声: CC-BY-4.0 (帰属明示)
+- **CR-20** [MUST] (**v1.2 で Apache-2.0 に確定**): 公開モデル weights のライセンスは **Apache-2.0** とする。patent grant、下流OSS TTS互換性、ModernBERT系との整合が根拠 (OPEN-05 解決参照)
+- **CR-21** [MUST] (**v1.2 で精緻化**): 学習データソースのライセンス条項を尊重する ([03 §6]):
+  - JSUT **音声**: CC-BY-4.0 (帰属明示)
+  - **JSUT テキスト (Basic5000 含む)**: **CC-BY-SA-4.0** → ⚠️ **eval only に厳格分離、学習に混入禁止**
   - UniDic: BSD派生 (帰属明示)
-  - Open JTalk辞書: 修正BSD
-  - Wikipedia: CC-BY-SA-4.0 (**Share-Alike 注意**)
-  - JMDict: CC-BY-SA-4.0 (**Share-Alike 注意**)
-- **CR-22** [MUST]: Phase 1 開始前に法務レビューを行い、CC-BY-SA-4.0 データを学習に含む場合の重み配布可否を確定する
+  - Open JTalk辞書 / pyopenjtalk-plus: 修正BSD / MIT
+  - **Wikipedia**: CC-BY-SA-4.0 → **学習に使用可、Model Card に法的立場明記** (先例: Japanese StableLM, LLM-jp-3)
+  - **JMDict**: CC-BY-SA-4.0 → ⚠️ **runtime lookup に限定 (学習gradientに含めない、Misaki の先例に準拠)**
+  - **JVS-3000 kana annotation** (CyberAgent AI Lab): CC-BY-SA-4.0 → ⚠️ **評価専用 held-out に厳格分離**
+  - Aozora Bunko: public domain (制限なし)
+  - llm-jp-corpus: Apache-2.0 (制限なし)
+- **CR-22** [MUST] (**v1.2 で更新**): Model Card に以下の法的立場を明記する:
+  > "Training data includes CC-BY-SA-4.0 sources (Wikipedia-JA). Model weights are released under Apache-2.0 based on the position that trained weights are not a derivative work of training data (CC 2025 primer; Andersen v. Stability 2025; Japan Copyright Act Art. 30-4)."
+- **CR-23** [MUST] (**v1.2 追加**): **JMDict は推論時 runtime lookup にのみ使用** — training gradient に含めない設計を実装する (Style-Bert-VITS2 + Misaki 先例)
+- **CR-24** [MUST] (**v1.2 追加**): **JSUT Basic5000 と JVS-3000 kana は評価専用**、学習コーパスから自動的に除外する CI check を設ける (data leakage 防止)
+- **CR-25** [SHOULD] (**v1.2 追加**): permissive-only スタック (Aozora 1.6M + UniDic + pyopenjtalk-plus + llm-jp-corpus) だけで 100万文コーパスを構築するオプションを常に維持する (Wikipedia依存の代替として)
 
 ### 4.4 開発フロー
 
@@ -428,15 +449,15 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 ---
 
-## 9. 未確定事項 (Phase 0 開始前に確定を要する)
+## 9. 未確定事項 (Phase 0 開始前の解決状態)
 
-以下は本要求定義書ドラフト時点で **意思決定待ち** の項目。Phase 0 kickoff前にステークホルダーで確定する:
+**v1.2 で 4/5 項目が解決**。残 1 (OPEN-04 ブランド名) は Phase 0〜3 中の任意タイミングで確定可。
 
-- **OPEN-01**: JVS-3000 (Koriyama benchmark) の kana アノテーションデータの入手可否と、入手できない場合の代替評価スキーム
-- **OPEN-02**: Wikipedia日本語版のCC-BY-SA-4.0 (Share-Alike) を学習データに使う場合、公開する重みが Share-Alikeを継承するか、または Wikipediaを使わずに他ソース (UniDic + pyopenjtalk-plus + 青空文庫のみ) で学習するかの判断
-- **OPEN-03**: 主軸トークナイザ戦略 (a=seq2seq / b=MeCab-pretokenize / c=char-level) は Phase 2 の 3並列パイロット結果を待つ。**この時点でstakeholder review を必ず経る**
-- **OPEN-04**: モデル公開ブランド名 / リポジトリ名 (仮称: "ModernBERT日本語G2P" の正式命名)
-- **OPEN-05**: 最終ライセンスの確定 (MIT vs Apache-2.0)。データ由来のShare-Alike継承有無の判断次第
+- **OPEN-01** [✅ **RESOLVED v1.2**]: JVS-3000 kana アノテーションは **CyberAgent AI Lab** の GitHub リポジトリ `CyberAgentAILab/jvs_nonpara_kana` で完全公開。3,000文の手動アノテート kana + `eval_cer.py` 同梱。CC-BY-SA-4.0 (**評価専用 held-out に厳格分離**して学習に混入させない)。論文: Koriyama, "Benchmarking LLMs for G2P: A Japanese Case Study", Interspeech 2026, arxiv:2606.22009
+- **OPEN-02** [✅ **RESOLVED v1.2**]: Wikipedia日本語版 CC-BY-SA-4.0 の Share-Alike は、**モデル重み配布に継承しない解釈が支配的** (CC 2025 公式プライマー、Andersen v. Stability 判決、日本著作権法 30条の4)。先例: **Japanese StableLM / LLM-jp-3 が「日本語 Wikipedia + Apache-2.0 weights」を実施済み**。Model Card に法的立場を明記する形で採用可
+- **OPEN-03** [⏳ Phase 2 で確定]: 主軸トークナイザ戦略 (a=seq2seq / b=MeCab-pretokenize / c=char-level) は Phase 2 の 3並列パイロット結果を待つ (v1.1 NFR-35 で確定手順を規定済み)
+- **OPEN-04** [⏳ Phase 0〜3 任意タイミング]: モデル公開ブランド名 / リポジトリ名。仮称 "ModernBERT日本語G2P" のまま Phase 0 開始可、公開直前に確定
+- **OPEN-05** [✅ **RESOLVED v1.2**]: 最終ライセンスは **Apache-2.0** に決定。根拠: (1) Transformer architecture の patent grant 保護 (MIT にはない)、(2) 下流 OSS TTS 全てと互換 (Style-Bert-VITS2 AGPL / GPT-SoVITS MIT / Kokoro-Misaki Apache 等)、(3) ModernBERT (Answer.AI) 系との整合。MIT ベースの sbintuitions/modernbert-ja-130m を fine-tune した派生 weights を Apache-2.0 で配布は MIT permissive の再ライセンス可により合法
 
 ---
 
@@ -461,6 +482,7 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 |---|---|---|---|
 | 1.0 | 2026-07-03 | 初版。調査01〜08を統合したドラフト | (Phase 0 前に確定要) |
 | 1.1 | 2026-07-03 | 追加調査(A計算コスト実測・B先行研究Ablation) を反映して10領域を補強。**国際化スコープの明示** / **バージョニング(SemVer)** / **Ablation具体化(NFR-33〜38)** / **計算コスト規定(NFR-60〜64)** / **性能回帰CI(NFR-70〜73)** / **段階リリース(α→β→1.0)** / **悪用防止・コンプライアンス** / **依存関係バージョン明示** / **pyopenjtalk互換テスト(FR-35)** / **多言語混在対応をMoSCoW MUSTに昇格** | (Phase 0 前に確定要) |
+| **1.2** | **2026-07-03** | **Phase 0 blocker 5件の並列調査結果を反映して OPEN-01〜05 のうち4件を解決**。(1) OPEN-01=✅JVS-3000 は CyberAgent AI Lab GitHub で公開、(2) OPEN-02=✅Wikipedia CC-BY-SA-4.0 は先例あり Apache-2.0 weights で配布可 (Japanese StableLM/LLM-jp-3 先例)、(3) OPEN-05=✅**ライセンスを Apache-2.0 に確定**、(4) JSUT テキストが CC-BY-SA-4.0 と判明 → eval only 分離を CR-24 で強制、(5) JMDict は runtime lookup のみ許可 (CR-23)、(6) Vast.ai を primary クラウドに確定 (RTX 4090 primary, RTX 3090 fallback)、(7) Hard-set キュレーションは LLM半自動 (C案) を primary手法に確定 | **Phase 0 開始可** |
 
 ---
 
