@@ -59,11 +59,31 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 ### 2.1 コアG2P機能
 
-- **FR-01** [MUST]: 任意の日本語テキスト (漢字 / ひらがな / カタカナ / 英数字混在) を入力として受け付ける
+- **FR-01** [MUST]: 任意の日本語テキストを入力として受け付ける。**実世界の日本語文にはデフォルトで多言語要素が混在するため、以下すべてを一体の入力として扱う**:
+  - 漢字、ひらがな、カタカナ
+  - **英単語がアルファベット表記のまま埋め込まれるケース** (例: 「iPhone を買った」「PDF を開く」)
+  - **英字略語** (AI, NASA, HTML, PDF, WHO, GDP等)
+  - **英数字混在** (10km, 3GB, 2025年, 10:30, 3.14, Ver.2.0)
+  - **記号・ハイフン連結語** (Wi-Fi, e-mail, T-shirt, C++)
+  - **カタカナ外来語** (コンピュータ、アプリ、コーヒー)
+  - **絵文字・機種依存文字** (Phase 1 の正規化で除去/置換対象)
 - **FR-02** [MUST]: 入力テキストに対して JULIUS音素セット準拠の音素列を出力する ([05設計 §4.1])
 - **FR-03** [MUST]: 各モーラに対してアクセント記号 (H / L) を付与した出力を提供する
 - **FR-04** [MUST]: アクセント句境界マーカ ('/') を含む出力形式を提供する
 - **FR-05** [SHOULD]: X-SAMPA、カタカナ音素表記への変換ユーティリティを提供する
+
+### 2.1a 多言語混在文の扱い (**新規追加**)
+
+日本語文に埋め込まれた多言語要素をどう音素化するかは、精度に直接影響する。以下を **MUST** 要件とする:
+
+- **FR-06** [MUST]: 英単語混在部分について、以下いずれかの戦略で音素列を生成する:
+  - **Strategy A**: 英→カタカナ音写 → 日本語音素化 (Kanalizer流。VOICEVOX/kanalizer-model のパスに準拠)
+  - **Strategy B**: 英発音記号 (CMUdict / IPA) を経由し、日本語音素にマッピング
+  - **Phase 2** で Strategy A / B の両方をパイロット評価し、精度・レイテンシ・カバレッジで最良を確定する
+- **FR-07** [MUST]: 英字略語 (AI, NASA等) を **アルファベット読み** (例: AI → エーアイ) と **単語読み** (例: NASA → ナサ) で区別する。判定は文脈+辞書+モデル出力の3層で決定する
+- **FR-08** [MUST]: 英数字・単位表現 (10km, 3GB, 2025年, 10:30, 3.14) の正規化・読み上げロジックを実装する
+- **FR-09** [MUST]: 記号連結語 (Wi-Fi, e-mail, T-shirt) を1トークンとして扱い、既存辞書または外来語NNで音素化する
+- **FR-0A** [SHOULD]: 未知の混在パターン (SNS発の造語、絵文字混在) に対するフォールバック戦略を実装する
 
 ### 2.2 マルチタスク・ヘッド
 
@@ -117,13 +137,15 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 ### 3.2 Hard-set 精度 (per-category)
 
-以下5カテゴリの hard-set (各200文) 上で、pyopenjtalk 単独 baseline を上回る必要がある:
+以下 **7カテゴリ** の hard-set (各200文) 上で、pyopenjtalk 単独 baseline を上回る必要がある:
 
 - **NFR-10** [MUST]: 多音字 hard-set の PER が pyopenjtalk baseline を上回る
 - **NFR-11** [MUST]: 助数詞語 hard-set の PER が pyopenjtalk baseline を上回る
 - **NFR-12** [MUST]: 固有名詞 hard-set (漢字 + カタカナ) の PER が pyopenjtalk baseline を上回る
-- **NFR-13** [MUST]: 外来語 hard-set の PER が pyopenjtalk baseline を上回る
-- **NFR-14** [MUST]: 数詞 / 日付 / 時刻 hard-set の PER が pyopenjtalk baseline を上回る
+- **NFR-13** [MUST]: カタカナ外来語 hard-set の PER が pyopenjtalk baseline を上回る
+- **NFR-14** [MUST]: 数詞 / 日付 / 時刻 / 単位 hard-set の PER が pyopenjtalk baseline を上回る
+- **NFR-15** [MUST]: **英単語混在文 hard-set (英単語+日本語混在文 200文) の PER が pyopenjtalk baseline を上回る** — 「iPhone を買った」「PDF を開く」等
+- **NFR-16** [MUST]: **英字略語 hard-set (AI/NASA/HTML/e-mail等の混在文 200文) の PER が pyopenjtalk baseline を上回る**
 
 ### 3.3 推論性能
 
@@ -172,7 +194,9 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **CR-11** [MUST]: JVS nonpara30 subset の 3,000文 (Koriyama benchmark) は評価専用に固定、学習に混入させない
 - **CR-12** [MUST]: 全データをJSONスキーマに正規化し `data/processed/` に保存する ([06 §Phase 1])
 - **CR-13** [MUST]: 数詞 / 固有名詞 (漢字/カタカナ) / 助数詞語 / 外来語 のサンプルには `sample_weight = 2.0` を適用する ([03 §7])
-- **CR-14** [MUST]: 5カテゴリ (多音字/助数詞/固有名詞/外来語/数詞) 各200文のhard-setをPhase 1中に人手キュレーションする
+- **CR-14** [MUST]: **7カテゴリ (多音字/助数詞/固有名詞/カタカナ外来語/数詞・単位/英単語混在文/英字略語) 各200文のhard-setをPhase 1中に人手キュレーションする**
+- **CR-15** [MUST]: 学習データに英単語混在パターンを **最低5万文** 含める (Wikipedia日本語版のtech関連記事、GitHub日本語READMEクローリング等)
+- **CR-16** [MUST]: 英単語 → カタカナ音写辞書 (Kanalizer + CMUdict派生等) を Phase 1 で整備し、Strategy A のフォールバック用リソースとして固定する
 
 ### 4.3 ライセンス
 
@@ -225,7 +249,7 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 - **AC-01**: 3本柱すべてで **haqumei / OpenJTalk を明確に上回る** (最低0.15%以上の差) — NFR-01, NFR-02, NFR-03
 - **AC-02**: フロンティアLLM (Gemini 3.1 Pro 0.62%) との JVS-3000 差 < 0.2% (stretch: 差 < 0.1% あるいは越え)
-- **AC-03**: 5カテゴリ Hard-set全てで pyopenjtalk baseline を上回る (NFR-10〜14)
+- **AC-03**: **7カテゴリ Hard-set全てで pyopenjtalk baseline を上回る** (NFR-10〜16)
 - **AC-04**: Style-Bert-VITS2 に投入した downstream TTS pronunciation CER が既存 pyopenjtalk投入時より改善する
 - **AC-05**: ドキュメントとサンプルコードで、外部開発者が pyopenjtalk のドロップイン置換として15分以内に動作確認できる
 - **AC-06**: モデル配布 (HF Hub) + 評価スクリプト再現 (GitHub) が第三者に成立している
@@ -278,6 +302,9 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | **RISK-06** | pure-NN で prosperity期待 | 反証済み前提を明示的に禁則化 | CR-40〜43 |
 | **RISK-07** | Hard-setアノテーション不足 | Phase 1で明示的キュレーション時間確保 | CR-14 |
 | **RISK-08** | Loss weight tuning が難航 | Phase 3で grid search を初期から計画 | (Phase 3 内部) |
+| **RISK-09** | 英単語混在文の学習データ不足 | Wikipedia tech記事、GitHub日本語README等の追加クローリング | CR-15 |
+| **RISK-10** | 英→カタカナ音写のカバレッジ不足 (未知綴りの英単語) | Kanalizer NN + CMUdict + フォールバック規則の3層構造 | FR-06, CR-16 |
+| **RISK-11** | 略語のアルファベット読み vs 単語読み判定失敗 | 文脈依存の学習 + 明示的な略語辞書 (AI→エーアイ 等) 200件以上を Phase 1 で整備 | FR-07 |
 
 ---
 

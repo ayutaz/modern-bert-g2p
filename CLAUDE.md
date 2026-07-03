@@ -94,8 +94,12 @@ ModernBERTベースの日本語G2P（Grapheme-to-Phoneme）モデルの新規開
 
 - **音素表記**: JULIUS音素セット + モーラアクセントH/L + アクセント句境界マーカ '/' を canonical とする (pyopenjtalk と互換)
 - **トークナイザー起因の失敗モード**: Phase 2 で判断が確定するまで、seq2seq / MeCab-pretokenize / char-level の3並列パイロットを維持する
-- **カテゴリ別 sample reweighting**: 数詞 / 固有名詞 (漢字/カタカナ) / 助数詞語 / 外来語には `sample_weight = 2.0` を推奨
-- **Hard-set**: 5カテゴリ (多音字/助数詞/固有名詞/外来語/数詞) 各200文の人手キュレーションを Phase 1 で作成し、以降のすべての評価で使用
+- **カテゴリ別 sample reweighting**: 数詞 / 固有名詞 (漢字/カタカナ) / 助数詞語 / 外来語 / 英単語混在 / 英字略語 には `sample_weight = 2.0` を推奨
+- **Hard-set**: **7カテゴリ (多音字/助数詞/固有名詞/カタカナ外来語/数詞・単位/英単語混在文/英字略語) 各200文** の人手キュレーションを Phase 1 で作成し、以降のすべての評価で使用
+- **多言語混在対応 (MUST)**: 実世界の日本語文には英単語・略語・記号連結語 (iPhone, PDF, AI, Wi-Fi, e-mail等) がデフォルトで混在する。以下を実装:
+  - 英単語混在 → Kanalizer流の音写 or CMUdict→日本語音素マッピング (Phase 2で head-to-head比較)
+  - 英字略語 → アルファベット読み (AI→エーアイ) と単語読み (NASA→ナサ) を辞書 + 文脈で判定
+  - 英数字・単位 (10km, 3GB, 2025年, 10:30, 3.14) の正規化ロジック
 - **Reproducibility**: 全ての ablation は同じ seed / 同じ splits で実行し、結果表を1つに統合する
 
 ## Pure-NN 日本語G2P の実証的失敗パターン (07 で判明した追加事実)

@@ -302,7 +302,7 @@ def hybrid_g2p_inference(text, model, dict_lookup=pyopenjtalk):
 
 ## 8. 監視すべき失敗モード (Ablation で計測)
 
-以下は Koriyama / NHK / Hida のいずれかの論文で明示的に指摘された課題:
+以下は Koriyama / NHK / Hida のいずれかの論文で明示的に指摘された課題 + 実世界の日本語文で頻出する多言語混在:
 
 1. **助数詞語のアクセント連続変異** (Kurihara: OpenJTalk 16.24% CER)
    - 例: "3人 (さんにん)", "5個 (ごこ)" のアクセント型
@@ -314,8 +314,61 @@ def hybrid_g2p_inference(text, model, dict_lookup=pyopenjtalk):
    - 例: "行" → いく/おこなう/こう, "生" → なま/せい/しょう
 5. **カタカナ表記外来語** (Koriyama benchmark 8.5%含有)
    - 例: 稀な英単語カタカナ化, 音写のバリエーション
-6. **数詞・日付・時刻** (Koriyama benchmark 14.2%含有)
-   - 例: "2025年", "3.14", "10:30"
+6. **数詞・日付・時刻・単位** (Koriyama benchmark 14.2%含有)
+   - 例: "2025年", "3.14", "10:30", "10km", "3GB"
+7. **英単語混在文** (**新規、実世界頻出**)
+   - 例: "iPhoneを買った", "PDFを開く", "Zoomで会議した"
+   - 課題: 英単語のスパン検出 → カタカナ音写 → 日本語音素化
+8. **英字略語** (**新規、実世界頻出**)
+   - 例: AI (エーアイ), NASA (ナサ), HTML (エイチティーエムエル), e-mail (イーメール), Wi-Fi (ワイファイ)
+   - 課題: アルファベット読み vs 単語読みの文脈依存判定
+
+## 8a. 多言語混在文の処理パイプライン (**新規**)
+
+実世界の日本語文にはデフォルトで英単語・略語・記号連結語が混在するため、以下の処理を **前処理 + モデル + 後処理** の3層で行う:
+
+### 8a.1 前処理
+
+- **latin span detection**: 連続 latin 文字を1つのスパンとして識別
+- **classify**: 大文字連続 (`AI`, `NASA`) = 略語候補 / mixed case (`iPhone`, `MacBook`) = 通常単語 / kebab-case (`Wi-Fi`, `e-mail`) = 連結語
+- **normalize**: 全角latin → 半角latin、全角数字 → 半角数字
+
+### 8a.2 モデル内部 (ModernBERT)
+
+- 混在文をSentencePiece tokenizer に投入すると、latin 文字は byte-fallback で処理される
+- BERTのcontextual embeddings が、文脈から適切な発音パターンを学習
+- Head E (BAS) が周辺文字との連続変異を補正
+
+### 8a.3 後処理: 英単語 → カタカナ音写
+
+3段階のフォールバック戦略:
+
+1. **辞書lookup優先**: pyopenjtalk-plus + 外来語辞書 (Kanalizer学習データ由来) にヒットすればそれを使用
+2. **Kanalizer NN**: 未知綴りは VOICEVOX/kanalizer-model 相当のseq2seqでカタカナ化
+3. **規則フォールバック**: それも失敗した場合、CMUdict → 日本語音素マッピング規則の deterministic 変換
+
+### 8a.4 英字略語の判定
+
+```
+if word is all-uppercase and length <= 5:
+    if in abbreviation_dict:  # AI, NASA, HTML等の明示的リスト
+        use listed reading (アルファベット読み or 単語読み)
+    else:
+        default to alphabet reading (エーアイ etc.)
+elif word is mixed case:
+    treat as loanword → Kanalizer
+```
+
+### 8a.5 例
+
+| 入力 | 期待音素列 (簡易表記) |
+|---|---|
+| "iPhoneを買った" | ai-fo-N o kat-ta |
+| "PDFを開く" | pii-dii-e-fu o hi-ra-ku |
+| "AIエンジニア" | ee-ai eN-ji-ni-a |
+| "NASAが発表した" | na-sa ga hap-pyo-o-shi-ta |
+| "Wi-Fi環境" | wa-i-fa-i kaN-kyo-o |
+| "10kmランニング" | jup-pu-ki-ro raN-ni-N-gu |
 
 各カテゴリで別々の hard-set を作り、per-category PER を報告する。
 
