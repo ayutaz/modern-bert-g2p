@@ -1,8 +1,8 @@
 # 要求定義書 — ModernBERT日本語G2P
 
-**バージョン:** 1.0
-**作成日:** 2026-07-03
-**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果と合意事項
+**バージョン:** 1.1
+**作成日:** 2026-07-03 (v1.0 初版) / 2026-07-03 (v1.1 補強)
+**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果と、追加調査 (計算コスト実測 / Ablation先行研究) の反映
 **ステータス:** ドラフト (Phase 0 開始前の確定を要する)
 
 ---
@@ -40,9 +40,25 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 **含まない** (Out-of-scope):
 - TTS音響モデル (voice cloning, prosody generation)
-- 多言語G2P
+- **中国語・韓国語・その他アジア言語混在文** (英日混在は in-scope だが、他言語は Phase 6 以降)
+- **ローマ字入力からのG2P** (「konnichiwa」等の全ローマ字入力は out-of-scope、部分的な英単語混在のみ扱う)
+- 独立した多言語 G2P モデル (英単独、中単独 等の G2P 提供)
 - 音声認識前段のG2P
 - リアルタイム・ストリーミング推論最適化 (Phase 6以降で検討)
+
+**国際化スコープの明確化 (v1.1 追加)**:
+
+| 入力パターン | 対応 | 例 |
+|---|---|---|
+| 純日本語 (漢字/ひらがな/カタカナ) | ✅ **in-scope** | 「今日は雨だ」 |
+| 英単語が日本語文に混在 | ✅ **in-scope** | 「iPhone を買った」 |
+| 英字略語が日本語文に混在 | ✅ **in-scope** | 「AI エンジニア」 |
+| 英数字・単位が混在 | ✅ **in-scope** | 「10km 走った」 |
+| 記号連結語 | ✅ **in-scope** | 「Wi-Fi 環境」 |
+| 全英単語 (日本語なし) | ⚠️ **best-effort** | 「Hello World」→ 英→カナ音写のみ |
+| 中国語・韓国語混在 | ❌ **out-of-scope** | 「北京語で挨拶」の中国語部分等 |
+| ローマ字全文 | ❌ **out-of-scope** | 「konnichiwa」等 |
+| 音素記号入力 (JULIUS等) | ❌ **out-of-scope** | 「k o N n i ch i w a」 |
 
 ### 1.4 ステークホルダーと想定利用者
 
@@ -112,6 +128,7 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **FR-32** [MUST]: `g2p(text, return_accent=True)` でアクセント情報付き出力を提供する
 - **FR-33** [SHOULD]: バッチ推論API (`g2p_batch(texts: List[str])`) を提供する
 - **FR-34** [MAY]: Rust bindings (haqumei互換) を提供する
+- **FR-35** [MUST] (**v1.1 追加**): pyopenjtalk 互換テストスイート (最小 1,000文) を CI で実行し、辞書ヒット入力の出力一致率 **≥ 99.0%** を維持する (ドロップイン置換の実質保証)
 
 ### 2.5 モデル配布
 
@@ -119,6 +136,12 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **FR-41** [MUST]: ONNX 形式で配布する (haqumei風のデプロイパスに乗るため)
 - **FR-42** [SHOULD]: MODEL_CARD / INFERENCE_GUIDE / LICENSEの標準ドキュメント一式を含める
 - **FR-43** [MAY]: 量子化バリアント (int8) を配布する
+- **FR-44** [MUST] (**v1.1 追加**): モデルタグは **SemVer準拠** (`v{MAJOR}.{MINOR}.{PATCH}[-{alpha|beta|rc}.{N}]`) で採番する
+  - MAJOR = 音素表記 / API シグネチャ 互換破壊時
+  - MINOR = 新機能・新オプション追加時 (後方互換)
+  - PATCH = 精度改善・バグ修正 (完全後方互換)
+  - Phase 3完了時 = `v0.1.0-alpha.1`, Phase 4完了時 = `v0.2.0-beta.1`, Phase 6公開時 = `v1.0.0`
+- **FR-45** [SHOULD] (**v1.1 追加**): CHANGELOG.md を SemVer リリースごとに更新し、精度差分と互換破壊を明記する
 
 ---
 
@@ -160,6 +183,22 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **NFR-31** [SHOULD]: 30M/70M/310m の Ablation バリアントも配布する
 - **NFR-32** [MAY]: 量子化 (int8) バリアントで元サイズの1/4以下
 
+### 3.4a Ablation 設計 (**v1.1 追加**、調査B に基づく具体化)
+
+先行研究 (Hida 2022: PD 2軸×7設定, PnG BERT: 6システム, CharsiuG2P: 8/12/16層) の慣行に従い、**one-axis-at-a-time** で実行する。フル格子ではない。
+
+- **NFR-33** [MUST]: **総 Ablation runs 数を 40〜60 runs以内**に制限する (単一 GPU 24GB で 8〜14日で完走可能な範囲)
+- **NFR-34** [MUST]: **各設定を最低 3 seed** で回し、frontier候補は 5 seed に増やす (Mosbach 25, Dodge 20 の慣行の縮小版)
+- **NFR-35** [MUST]: **軸確定の順序**を以下に固定する (先行軸で結果が良かった1点を固定して後続軸を回す):
+  1. **Tokenizer 軸** (Phase 2): SP / MeCab-pretokenize / char-level の 3設定 × 3 seed = 9 runs (130m 固定、中データ、lr=3e-5)
+  2. **Learning rate 軸** (Phase 2 末): 1e-5, 3e-5, 5e-5 の 3設定 × 3 seed = 9 runs (以降 LR は sweep しない)
+  3. **Model size 軸** (Phase 5): 30m / 70m / 130m / 310m の 4設定 × 3 seed = 12 runs
+  4. **Data 軸** (Phase 5): 100万 / 200万 / 500万 文 の 3設定 × 3 seed = 9 runs (scaling law)
+  5. **LoRA vs full FT** (Phase 5, 310m のみ): 2設定 × 3 seed = 6 runs
+- **NFR-36** [MUST]: 各 Ablation run の結果は Weights & Biases もしくは同等の実験管理ツールで永続化し、リポジトリからリンクを張る
+- **NFR-37** [SHOULD]: **統計検定**として paired two-tailed t-test で mean/std を報告する
+- **NFR-38** [SHOULD]: Ablation 結果を **Pareto frontier図** (x軸=モデルサイズ、y軸=PER) と **scaling law図** (x軸=データ量、y軸=PER) の2枚で公開する
+
 ### 3.5 再現可能性
 
 - **NFR-40** [MUST]: すべての Ablation は同じ seed / 同じ splits で実行し、結果表を1つに統合する
@@ -171,6 +210,23 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **NFR-50** [MUST]: README、MODEL_CARD、INFERENCE_GUIDE、LICENSEの4文書を公開時に整備
 - **NFR-51** [SHOULD]: `docs/research/` の技術ドキュメントを最新状態で維持
 - **NFR-52** [MAY]: 論文または arxiv preprint を公開
+
+### 3.7 計算コスト (**v1.1 追加**、調査A に基づく)
+
+- **NFR-60** [MUST]: **単一 GPU 24GB** (RTX 4090 / L4 / A5000 / A10G 等) で fine-tune 1 run が完走できる設定を primary configuration とする
+  - 想定: seq_len=1024, batch_size=16〜32, bf16 + Flash Attention 2, gradient accumulation=2〜4
+  - 想定 GPU 時間: **1 run あたり 5〜10 GPU-hours** (100万文 × 3 epochs, マルチタスク5head)
+- **NFR-61** [MUST]: **全 Ablation (40〜60 runs) の総 GPU コストが US$100 以下**で完結する見積り (RunPod Community RTX 4090 $0.34/hr 基準で $70〜$200 予算内)
+- **NFR-62** [SHOULD]: DeepSpeed / FSDP / ZeRO 等の分散学習は使用しない (130m は分散不要の閾値以下)
+- **NFR-63** [MAY]: 310m variant の Ablation では LoRA (r=16, alpha=32) を primary、full fine-tune を Ablation対照とする (メモリ節約率 20〜30%)
+- **NFR-64** [MUST]: **学習を open reproducible にする** — 各 run の hyperparameter, seed, GPU 種別, 実測時間, 実測 VRAM 使用量を `experiments/logs/` に永続化
+
+### 3.8 性能回帰許容範囲 (**v1.1 追加**)
+
+- **NFR-70** [MUST]: PATCHリリース (`v0.M.p → v0.M.(p+1)`) では、3本柱ベンチマーク (JVS/JSUT/ROHAN) のいずれも精度が悪化しないこと
+- **NFR-71** [MUST]: MINORリリース (`v0.M.0 → v0.(M+1).0`) では、3本柱の平均が改善すること
+- **NFR-72** [MUST]: 特定ベンチマークで **0.3ポイント以上の悪化がある場合は CI で reject** する自動リグレッションテストを設ける
+- **NFR-73** [SHOULD]: 各リリースで 7 Hard-set の精度差分を CHANGELOG に記載する
 
 ---
 
@@ -227,9 +283,37 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 ### 4.6 計算資源
 
-- **CR-50** [MUST]: 全 fine-tune は bf16 混合精度 + Flash Attention on で実施する
+- **CR-50** [MUST]: 全 fine-tune は bf16 混合精度 + Flash Attention 2 on で実施する
 - **CR-51** [SHOULD]: LoRA (r=16, alpha=32) と full fine-tune の両方を Phase 2 で評価
-- **CR-52** [MAY]: 単一 GPU (24GB VRAM級) で完走できる設定を primary configuration とする
+- **CR-52** [MUST] (**v1.1 でMAYから昇格**): **単一 GPU (24GB VRAM級) で完走できる設定を primary configuration** とする — 分散学習に依存しない構成にロックする
+- **CR-53** [MUST] (**v1.1 追加**): **130m モデルは full fine-tune を primary**、LoRA を Ablation対照 (BERT系130Mでは LoRA のメモリ節約率が 20〜30% と限定的なため)
+- **CR-54** [MUST] (**v1.1 追加**): **310m モデルは LoRA を primary**、full fine-tune を Ablation対照 (メモリ節約効果が現れる規模)
+- **CR-55** [MUST] (**v1.1 追加**): 学習は **RunPod / Lambda Labs / Vast.ai 相当のスポット GPU** でも完走できることを CI で確認する (US$100 以下 の総コスト予算に収めるため)
+
+### 4.7 依存関係 (**v1.1 追加**)
+
+- **CR-60** [MUST]: **Python ≥ 3.10** (ModernBERT は Python 3.10+ で公式サポート)
+- **CR-61** [MUST]: **PyTorch ≥ 2.1** (Flash Attention 2 対応), **transformers ≥ 4.48** (ModernBERT公式サポート)
+- **CR-62** [MUST]: **pyopenjtalk ≥ 0.4.0** または **pyopenjtalk-plus** をハイブリッド推論の primary path として使用
+- **CR-63** [SHOULD]: ONNX Runtime ≥ 1.20 (ONNX 配布時のリファレンス推論エンジン)
+- **CR-64** [SHOULD]: CUDA 12.1+ / cuDNN 9+ (Flash Attention 2 の推奨バージョン)
+- **CR-65** [MAY]: MPS (Apple Silicon) はベストエフォート対応 (Phase 6 の Nice-to-have)
+
+### 4.8 段階リリース戦略 (**v1.1 追加**)
+
+- **CR-70** [MUST]: 以下の**3段階リリースゲート**を設ける:
+  - **α (alpha)**: Phase 3完了時 (`v0.1.0-alpha.1`) — 内部評価のみ、HF Hub にはプライベート公開
+  - **β (beta)**: Phase 4完了時 (`v0.2.0-beta.1`) — HF Hub パブリック公開、限定的な社外テスター (Style-Bert-VITS2 コミュニティ主要メンテナ 3〜5名) の feedback 収集
+  - **1.0 (stable)**: Phase 6完了時 (`v1.0.0`) — GitHub Releases + arxiv preprint + Model Card 一式公開
+- **CR-71** [MUST]: β リリース時点で **AC-01〜03 の全 MUST 要件を満たす**こと (Ablation の完全性のみが Phase 5 で追加される想定)
+- **CR-72** [SHOULD]: 各リリース時に downstream TTS (Style-Bert-VITS2 想定) との統合テストを 1件以上実施し、結果を公開する
+
+### 4.9 悪用防止・コンプライアンス (**v1.1 追加**)
+
+- **CR-80** [MUST]: 学習データに含まれる**固有名詞・個人名の扱い** — 公開 Wikipedia / 青空文庫由来のみを使用し、非公開個人情報 (SNS 由来の実名等) は含めない
+- **CR-81** [MUST]: **Model Card に bias disclosure を記載** — 学習データ由来のバイアス (地域方言の非対応、古典表記の限定的対応 等) を明示する
+- **CR-82** [MUST]: **なりすましTTS への悪用防止** — Model Card に「TTS音響モデルを含まないため voice cloning には直接利用できない」旨を明記
+- **CR-83** [SHOULD]: 個人情報保護法 (APPI) 準拠の観点で、Phase 1 の法務レビューに含める (CR-22 と統合)
 
 ---
 
@@ -253,6 +337,10 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **AC-04**: Style-Bert-VITS2 に投入した downstream TTS pronunciation CER が既存 pyopenjtalk投入時より改善する
 - **AC-05**: ドキュメントとサンプルコードで、外部開発者が pyopenjtalk のドロップイン置換として15分以内に動作確認できる
 - **AC-06**: モデル配布 (HF Hub) + 評価スクリプト再現 (GitHub) が第三者に成立している
+- **AC-07** (**v1.1 追加**): **pyopenjtalk 互換テスト (FR-35) で辞書ヒット入力の一致率 ≥ 99.0%** を CI で維持している
+- **AC-08** (**v1.1 追加**): **全 Ablation の総 GPU コストが US$100 以下** で完結している (実測レシート/クラウド利用明細で証跡)
+- **AC-09** (**v1.1 追加**): CHANGELOG.md に v0.1.0-alpha → v1.0.0 の全リリース精度差分と互換破壊が記録されている
+- **AC-10** (**v1.1 追加**): Model Card に bias / misuse disclosure が記載され、法務レビューを経ている
 
 ---
 
@@ -263,24 +351,31 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 **MUST have (P0〜P4 で完了)**:
 - 3本柱ベンチマークでの haqumei越え精度 (AC-01)
 - ハイブリッド推論パイプライン (FR-20〜22)
-- pyopenjtalk互換API (FR-30〜32)
+- pyopenjtalk互換API + 互換テスト (FR-30〜32, FR-35)
 - HF Hub / GitHub 公開 (FR-40〜41)
+- **多言語混在文対応 (英単語/略語/英数字/記号連結語)** (FR-06〜0A) — **v1.1 で MUST に昇格**
+- **SemVer準拠のバージョニング** (FR-44) — v1.1追加
+- **単一 24GB GPU 完走の primary configuration** (CR-52, NFR-60) — v1.1追加
 
 **SHOULD have (P5〜P6 で完了)**:
-- モデルサイズ Ablation (30M/70M/130M/310M)
+- モデルサイズ Ablation (30M/70M/130M/310M) — NFR-33〜35 に具体化
 - 量子化 (int8) 配布
 - LLM stretch target (< 0.62% JVS-3000)
+- Pareto frontier / scaling law の可視化公開 (NFR-38)
+- 段階リリース (α → β → 1.0) (CR-70〜72) — v1.1追加
 
 **COULD have (Phase 6以降で検討)**:
 - Rust bindings (haqumei互換)
 - ストリーミング推論
-- 多言語混在 (英日混在文)
 - LLM蒸留による精度向上
+- MPS (Apple Silicon) 対応 (CR-65) — v1.1追加
 
 **WON'T have (今回スコープ外)**:
 - TTS音響モデル / voice cloning
 - リアルタイム音素ストリーミング
 - モバイル・エッジ最適化
+- **中国語・韓国語・その他アジア言語混在文** — v1.1で明示化
+- **ローマ字全文からの G2P** — v1.1で明示化
 
 ### 6.2 Kano分析 (品質モデル)
 
@@ -305,6 +400,11 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | **RISK-09** | 英単語混在文の学習データ不足 | Wikipedia tech記事、GitHub日本語README等の追加クローリング | CR-15 |
 | **RISK-10** | 英→カタカナ音写のカバレッジ不足 (未知綴りの英単語) | Kanalizer NN + CMUdict + フォールバック規則の3層構造 | FR-06, CR-16 |
 | **RISK-11** | 略語のアルファベット読み vs 単語読み判定失敗 | 文脈依存の学習 + 明示的な略語辞書 (AI→エーアイ 等) 200件以上を Phase 1 で整備 | FR-07 |
+| **RISK-12** (v1.1) | Ablation 総 runs が単一GPUの実効上限を超え Phase 5 が期限超過 | one-axis-at-a-time で 40〜60 runs に事前制限、frontier候補のみ 5 seeds | NFR-33〜35 |
+| **RISK-13** (v1.1) | クラウド GPU スポット価格が想定を超え US$100 予算オーバー | RunPod Community / Vast.ai の複数プロバイダを並行検討、on-demand H100 は使わない | NFR-61, CR-55 |
+| **RISK-14** (v1.1) | pyopenjtalk 互換テストが FR-35 の 99.0% を下回る | Phase 4 で reconciliation strategy を再検討、辞書優先ポリシーを強化 | FR-35, FR-23 |
+| **RISK-15** (v1.1) | 悪用防止の観点で TTS ベンダから苦情 | Model Card の bias / misuse disclosure を Phase 6 レビューで法務確認 | CR-81, CR-82 |
+| **RISK-16** (v1.1) | 性能回帰 CI (NFR-72) が false positive で PR merge を阻害 | Baseline の統計的分散を Phase 5 で測定し閾値を調整 | NFR-70〜72 |
 
 ---
 
@@ -323,6 +423,8 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | 市場空白領域 | `08_market_landscape.md §9〜10` |
 | ライセンス制約 | `03_datasets_and_benchmarks.md §6` |
 | フェーズ運用 | `06_implementation_roadmap.md` |
+| **計算コスト・Ablation** (v1.1) | HuggingFace `sbintuitions/modernbert-ja-130m` モデルカード, Answer.AI ModernBERT blog, Phil Schmid fine-tune benchmarks, RunPod pricing 2026-07, Hida ICASSP 2022 (arxiv 2201.09427), PnG BERT (arxiv 2212.08321), CharsiuG2P (arxiv 2204.03067) |
+| **依存関係バージョン** (v1.1) | ModernBERT 公式サポート要件 (PyTorch 2.1+, transformers 4.48+) |
 
 ---
 
@@ -358,9 +460,18 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | バージョン | 日付 | 変更内容 | 承認者 |
 |---|---|---|---|
 | 1.0 | 2026-07-03 | 初版。調査01〜08を統合したドラフト | (Phase 0 前に確定要) |
+| 1.1 | 2026-07-03 | 追加調査(A計算コスト実測・B先行研究Ablation) を反映して10領域を補強。**国際化スコープの明示** / **バージョニング(SemVer)** / **Ablation具体化(NFR-33〜38)** / **計算コスト規定(NFR-60〜64)** / **性能回帰CI(NFR-70〜73)** / **段階リリース(α→β→1.0)** / **悪用防止・コンプライアンス** / **依存関係バージョン明示** / **pyopenjtalk互換テスト(FR-35)** / **多言語混在対応をMoSCoW MUSTに昇格** | (Phase 0 前に確定要) |
 
 ---
 
 ## 12. 一言まとめ
 
-**本プロジェクトは「ModernBERT を単一の pyopenjtalk 置換モデルにする」のではなく、「haqumei/pyopenjtalk が崩れる領域 (アクセント連続変異 / 多音字 / OOV) を、市場に存在しない fine-tuned encoder NN で狙い撃ちで補正するハイブリッド」を作る**。要求定義の骨子は、この設計哲学を精度目標 (NFR-01〜04)、Hard-set 制約 (NFR-10〜14)、pure-NN禁則 (CR-40〜43) の3層でロックしている。
+**本プロジェクトは「ModernBERT を単一の pyopenjtalk 置換モデルにする」のではなく、「haqumei/pyopenjtalk が崩れる領域 (アクセント連続変異 / 多音字 / OOV / 英日混在) を、市場に存在しない fine-tuned encoder NN で狙い撃ちで補正するハイブリッド」を作る**。
+
+要求定義の骨子は、この設計哲学を以下の**5層**でロックしている:
+
+1. **精度目標** (NFR-01〜04): 3ティア (OpenJTalk / haqumei / フロンティアLLM) の明示的越え
+2. **Hard-set 制約** (NFR-10〜16): 7カテゴリ 各200文で pyopenjtalk baseline を上回る
+3. **pure-NN禁則** (CR-40〜43): 単一NN置換の設計を明示的に排除
+4. **v1.1 追加 — 計算実現可能性** (NFR-60〜64, CR-52〜55): 単一 24GB GPU / US$100以下 で全 Ablation を完走できることを制約に組み込む
+5. **v1.1 追加 — 段階リリース・悪用防止** (CR-70〜72, CR-80〜83): α → β → 1.0 の段階公開と、TTS 悪用防止・データ由来バイアス開示
