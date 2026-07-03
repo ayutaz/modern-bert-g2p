@@ -20,13 +20,12 @@ _EXPECTED_VALID_ROWS = 7
 def _hana_fields() -> list[str]:
     fields = ["*"] * UNIDIC_COLS
     fields[0] = "花"
-    fields[9] = "ハナ"
-    fields[10] = "名詞"
-    fields[11] = "普通名詞"
+    fields[4] = "名詞"
+    fields[5] = "普通名詞"
+    fields[13] = "ハナ"
     fields[16] = "和"
-    fields[24] = "ハナ"
-    fields[25] = "0"
-    fields[26] = "C1"
+    fields[28] = "0"
+    fields[29] = "C1"
     return fields
 
 
@@ -64,9 +63,8 @@ def test_parse_unidic_row_happy() -> None:
 def test_parse_unidic_row_multi_accent_takes_first() -> None:
     fields = _hana_fields()
     fields[0] = "頭"
-    fields[9] = "アタマ"
-    fields[24] = "アタマ"
-    fields[25] = "1,3"
+    fields[13] = "アタマ"
+    fields[28] = "1,3"
     row = parse_unidic_row(fields)
     assert row is not None
     assert row.text == "頭"
@@ -76,7 +74,7 @@ def test_parse_unidic_row_multi_accent_takes_first() -> None:
 
 def test_parse_skips_aType_star() -> None:
     fields = _hana_fields()
-    fields[25] = "*"
+    fields[28] = "*"
     assert parse_unidic_row(fields) is None
 
 
@@ -88,7 +86,7 @@ def test_parse_skips_empty_surface() -> None:
 
 def test_parse_skips_non_katakana_pron() -> None:
     fields = _hana_fields()
-    fields[9] = "!!"
+    fields[13] = "!!"
     assert parse_unidic_row(fields) is None
 
 
@@ -100,10 +98,9 @@ def test_parse_skips_wrong_column_count() -> None:
 def test_parse_loanword_from_goshu() -> None:
     fields = _hana_fields()
     fields[0] = "パン"
-    fields[9] = "パン"
+    fields[13] = "パン"
     fields[16] = "外"
-    fields[24] = "パン"
-    fields[25] = "1"
+    fields[28] = "1"
     row = parse_unidic_row(fields)
     assert row is not None
     assert row.category == "loanword"
@@ -125,10 +122,9 @@ def test_parse_general_row_sample_weight_is_one() -> None:
 def test_parse_loanword_row_sample_weight_is_two() -> None:
     fields = _hana_fields()
     fields[0] = "パン"
-    fields[9] = "パン"
+    fields[13] = "パン"
     fields[16] = "外"
-    fields[24] = "パン"
-    fields[25] = "1"
+    fields[28] = "1"
     row = parse_unidic_row(fields)
     assert row is not None
     assert row.category == "loanword"

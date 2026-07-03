@@ -1,6 +1,9 @@
-"""S2 ingest: parse UniDic-cwj lex.csv (30 columns) into Row records.
+"""S2 ingest: parse UniDic-cwj lex.csv (33 columns for cwj-3.1.1) into Row records.
 
-Implements docs/design/phase1_data_pipeline.md §3 (S2 UniDic-cwj 3.1.1).
+Implements docs/design/phase1_data_pipeline.md §3 (S2 UniDic-cwj 3.1.1). Column
+indexes verified against unidic-cwj-3.1.1/lex_3_1.csv:
+  0 surface, 4/5/6 POS1/2/3, 13 pron 発音形出現形, 16 goshu 語種,
+  28 accent nucleus, 29 accent connection type.
 """
 
 from __future__ import annotations
@@ -21,14 +24,14 @@ from modernbert_g2p.data.normalize import accent_nucleus_to_hl
 from modernbert_g2p.data.schema import Row, make_id, validate_row
 from modernbert_g2p.data.weighting import weight_for
 
-UNIDIC_COLS: int = 30
+UNIDIC_COLS: int = 33
 
 _COL_SURFACE = 0
-_COL_PRON = 9
-_COL_POS1 = 10
-_COL_POS2 = 11
+_COL_PRON = 13
+_COL_POS1 = 4
+_COL_POS2 = 5
 _COL_GOSHU = 16
-_COL_ATYPE = 25
+_COL_ATYPE = 28
 
 
 def _first_nucleus(atype_raw: str) -> int | None:
