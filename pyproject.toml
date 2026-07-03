@@ -50,6 +50,13 @@ training = [
     "omegaconf",
     "fugashi[unidic]",
 ]
+# Phase 2 MeCab pretokenizer requires fugashi + unidic-lite. Kept out of
+# the base install so unit CI (metrics + data pipeline) does not require
+# a MeCab toolchain.
+phase2 = [
+    "fugashi>=1.3",
+    "unidic-lite>=1.0",
+]
 # Phase 1 data pipeline output writers and Wikipedia HTML parsing.
 # `pyarrow` is required for Parquet output (JSONL fallback works without it);
 # `lxml` is used by the Wikipedia ingest source when available.

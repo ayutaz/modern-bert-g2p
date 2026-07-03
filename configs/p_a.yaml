@@ -1,0 +1,31 @@
+pilot: P-A
+model:
+  encoder_name: sbintuitions/modernbert-ja-130m
+  decoder_layers: 6
+  decoder_hidden: 512
+  decoder_heads: 8
+  decoder_ffn: 2048
+  decoder_dropout: 0.1
+  phoneme_vocab_size: 68
+  label_smoothing: 0.1
+data:
+  train_path: data/processed/v1/train.parquet
+  val_path: data/processed/v1/val.parquet
+  test_path: data/processed/v1/test.parquet
+  hard_set_path: data/hard_set_seed/samples.jsonl
+  jsut_yaml: jsut-label/text_kana/basic5000.yaml
+  jvs_dir: data/eval/jvs_kana
+  rohan_txt: data/eval/rohan/rohan4600.txt
+  batch_size: 8
+  num_workers: 0
+training:
+  encoder_lr: 3.0e-5
+  head_lr: 1.0e-4
+  warmup_steps: 2000
+  total_steps: 60000
+  weight_decay: 0.01
+  grad_clip: 1.0
+  precision: bf16
+  seed: 20260704
+  accumulate_grad_batches: 32
+output_dir: reports/phase2/p_a/{seed}
