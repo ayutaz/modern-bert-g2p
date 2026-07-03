@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-bert-g2p.local/schemas/hard_set_seed.json",
+  "title": "Hard-set Gold Label",
+  "description": "One labeled example for the hard-set curation seed. JULIUS phoneme set, mora-level H/L accent, accent-phrase boundary indices (mora-based).",
+  "type": "object",
+  "required": ["id", "category", "text", "phonemes", "accent"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable unique identifier. Format: hs-<category>-<3-digit-seq>. Example: hs-polyphone-001.",
+      "pattern": "^hs-[a-z_]+-[0-9]{3}$"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "polyphone",
+        "counter",
+        "proper_noun",
+        "loanword",
+        "numeric_unit",
+        "english_mixed",
+        "english_abbreviation"
+      ],
+      "description": "One of the 7 hard-set categories defined in CLAUDE.md."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Raw Japanese input sentence (surface form, no annotations)."
+    },
+    "phonemes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "description": "JULIUS phoneme symbol. Vowels: a i u e o. Consonants: k g s z j t d ch ts n h b p m y r w f v. Special: N (moraic n), q (geminate/sokuon), sil, pau. Long vowel: preceding vowel repeated OR ':' — this project canonicalizes as vowel repetition (e.g. koHko -> k o u k o o). Accent boundary marker '/' MUST NOT appear here; it belongs in accent_phrase_boundaries."
+      }
+    },
+    "accent": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["H", "L"]
+      },
+      "description": "Per-mora accent tier. Length MUST equal the number of moras in the surface reading (NOT the number of phonemes; a mora = CV, CyV, or N/q). Contains only 'H' (high) and 'L' (low). Accent nucleus is the last H before an L→ tail. Compatible with pyopenjtalk's HL string."
+    },
+    "accent_phrase_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "0-indexed mora positions where an accent phrase begins (excluding position 0, which is implicit). Example: for a 2-phrase 5-mora utterance whose second phrase starts at mora 3, this is [3]. Empty array = single accent phrase.",
+      "default": []
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form curator notes: reading ambiguity, disagreement with haqumei baseline, dialect assumption (Tokyo Yamanote), etc."
+    }
+  }
+}

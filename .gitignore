@@ -1,0 +1,63 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+.python-version
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Data (not distributed with source) ---
+data/raw/
+data/processed/
+data/interim/
+data/external/
+
+# --- Experiment outputs ---
+results/
+outputs/
+runs/
+logs/
+wandb/
+checkpoints/
+*.ckpt
+*.pt
+*.safetensors
+
+# --- Cache directories ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Third-party clones used only for evaluation ---
+jsut-label/
+rohan/
+jvs-3000/

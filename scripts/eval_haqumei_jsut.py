@@ -9,7 +9,7 @@ Usage:
   # 1. Install haqumei in a Python 3.12 venv (Python 3.14 not supported yet)
   uv venv --python 3.12 .venv
   source .venv/bin/activate
-  uv pip install haqumei==0.8.0 pyyaml
+  uv pip install -e ".[dev]"
 
   # 2. Clone JSUT-label
   git clone --depth 1 https://github.com/prj-beatrice/jsut-label.git
@@ -24,65 +24,28 @@ Protocol (matches haqumei-eval/src/main.rs):
 - Ignore `pau` in both hypothesis and reference
 - Devoicing normalization: A/E/I/O/U -> a/e/i/o/u (haqumei-eval lowercases uppercase phonemes except N)
 - Metric: token-level Levenshtein distance, PER = (S+D+I) / N_ref * 100
+
+Uses the canonical PER implementation in :mod:`modernbert_g2p.metrics.per`
+so any protocol change is reflected in both baseline reproduction and unit tests.
 """
 import os
 import sys
 from pathlib import Path
 
-import yaml
-from haqumei import Haqumei, IuPronunciation
+# Ensure `src/` is importable when running from a source checkout without an
+# editable install. Safe to keep even after `uv pip install -e .`.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_SRC = _REPO_ROOT / "src"
+if _SRC.exists() and str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+import yaml  # noqa: E402
+from haqumei import Haqumei, IuPronunciation  # noqa: E402
+
+from modernbert_g2p.metrics.per import compute_per  # noqa: E402
 
 
 JSUT_YAML = Path(os.environ.get("JSUT_YAML", "jsut-label/text_kana/basic5000.yaml"))
-DEVOICED = {"A", "E", "I", "O", "U"}
-
-
-def normalize_phoneme(p: str) -> str:
-    return p.lower() if p in DEVOICED else p
-
-
-def levenshtein(hyp, ref):
-    n, m = len(ref), len(hyp)
-    if n == 0:
-        return 0, 0, m
-    if m == 0:
-        return 0, n, 0
-    dp = [[0] * (m + 1) for _ in range(n + 1)]
-    back = [[None] * (m + 1) for _ in range(n + 1)]
-    for i in range(n + 1):
-        dp[i][0] = i
-        back[i][0] = "D"
-    for j in range(m + 1):
-        dp[0][j] = j
-        back[0][j] = "I"
-    back[0][0] = None
-    for i in range(1, n + 1):
-        for j in range(1, m + 1):
-            if ref[i - 1] == hyp[j - 1]:
-                dp[i][j] = dp[i - 1][j - 1]
-                back[i][j] = "="
-            else:
-                sub = dp[i - 1][j - 1] + 1
-                dele = dp[i - 1][j] + 1
-                ins = dp[i][j - 1] + 1
-                best = min(sub, dele, ins)
-                dp[i][j] = best
-                back[i][j] = "S" if best == sub else ("D" if best == dele else "I")
-    S = D = I = 0
-    i, j = n, m
-    while i > 0 or j > 0:
-        op = back[i][j]
-        if op == "=":
-            i -= 1; j -= 1
-        elif op == "S":
-            S += 1; i -= 1; j -= 1
-        elif op == "D":
-            D += 1; i -= 1
-        elif op == "I":
-            I += 1; j -= 1
-        else:
-            break
-    return S, D, I
 
 
 def main():
@@ -98,22 +61,20 @@ def main():
 
     ids = list(data.keys())
     texts = [data[i].get("text_level2") or data[i].get("text_level0") or "" for i in ids]
-    refs = [
-        [p for p in data[i].get("phone_level3", "").split("-") if p != "pau"]
-        for i in ids
-    ]
+    refs = [data[i].get("phone_level3", "").split("-") for i in ids]
 
     print(f"Running g2p_batch on {len(texts)} sentences...", file=sys.stderr)
     hyps_all = hq.g2p_batch(texts)
 
     S_total = D_total = I_total = N_total = 0
     for hyp_all, ref in zip(hyps_all, refs):
-        hyp = [normalize_phoneme(p) for p in hyp_all if p != "pau"]
-        S, D, I = levenshtein(hyp, ref)
-        S_total += S
-        D_total += D
-        I_total += I
-        N_total += len(ref)
+        # compute_per handles ignore={"pau"} and devoicing normalization; passing
+        # raw sequences here keeps this script in lockstep with unit tests.
+        result = compute_per(hyp_all, ref)
+        S_total += int(result["s"])
+        D_total += int(result["d"])
+        I_total += int(result["i"])
+        N_total += int(result["n"])
 
     per = (S_total + D_total + I_total) / max(N_total, 1) * 100
     print()

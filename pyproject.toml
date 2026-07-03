@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "modernbert-g2p"
+version = "0.1.0-alpha.0"
+description = "ModernBERT-based Japanese Grapheme-to-Phoneme model."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "modern-bert-g2p contributors" },
+]
+keywords = ["g2p", "japanese", "modernbert", "phoneme", "tts"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "pyyaml>=6.0",
+    "haqumei==0.8.0",
+    "pyopenjtalk",
+]
+
+[project.optional-dependencies]
+training = [
+    "torch>=2.1",
+    "transformers>=4.48",
+    "wandb",
+    "omegaconf",
+    "fugashi[unidic]",
+]
+dev = [
+    "pytest>=8",
+    "ruff",
+    "mypy",
+    "ipython",
+]
+
+[project.urls]
+Homepage = "https://github.com/yousan/modern-bert-g2p"
+Repository = "https://github.com/yousan/modern-bert-g2p"
+Documentation = "https://github.com/yousan/modern-bert-g2p/tree/main/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/modernbert_g2p"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/modernbert_g2p",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
