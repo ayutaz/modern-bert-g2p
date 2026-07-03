@@ -374,7 +374,10 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 ### 5.1 Phase Gate — 各フェーズを完了と認める条件
 
-- **AC-P0**: haqumei の JSUT PER 1.17% を ±0.1% 以内で再現でき、3本柱ベースライン (OpenJTalk / haqumei) の測定が1コマンドで再生成できる
+- **AC-P0** [**部分達成 v1.3 実測**]: haqumei の JSUT PER 1.17% を ±0.1% 以内で再現でき、3本柱ベースライン (OpenJTalk / haqumei) の測定が1コマンドで再生成できる
+  - ✅ **haqumei JSUT PER 実測: 1.1657% vs 官報 1.17%, Diff 0.0043 pt** (2026-07-03, Python 3.12 + haqumei 0.8.0 on macOS aarch64)。再現手順: `scripts/eval_haqumei_jsut.py` 参照
+  - ⏳ pyopenjtalk JVS-3000 kana CER 1.03% の実測再現は未実施 (B-03)
+  - ⏳ 3-baseline 1コマンド化 (`scripts/eval_baselines.sh`) は未実装 (B-05)
 - **AC-P1**: 統合スキーマの全データが `data/processed/` に格納され、5 hard-set が揃っている
 - **AC-P2**: 3並列パイロット (seq2seq / MeCab-pretokenize / char-level) の head-to-head 結果に基づき、Phase 3以降の主軸トークナイザ戦略が確定している
 - **AC-P3**: JSUT Basic5000 PER < 1.5% かつ JSUT accent-labeled subset mora-accent accuracy > 96.5% を達成する
