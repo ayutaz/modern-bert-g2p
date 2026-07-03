@@ -35,15 +35,19 @@ ModernBERTベースの日本語G2P（Grapheme-to-Phoneme）モデルの新規開
 2. **NHK Kurihara Interspeech 2024 の TJ-G2P + BAS が架構の直接的な青写真**。ModernBERT を BAS 相当のアクセント連続変異補正に使うのが最も証拠に基づいた設計。
 3. **Hida ICASSP 2022 のマルチタスク (G2P + 多音字 + APBP + ANPP)** を multi-head で実装する。主観MOS 3.67 (対 オラクル 3.69) の near-oracle 品質を目指す根拠。
 4. **SentencePieceトークナイザーの警告に注意**: SB Intuitions 自らが「token classification タスクで性能が悪い」と modernbert-ja HFカードで明記。naive per-token classificationは避け、seq2seq か MeCab pretokenize か char-level BERT のどれかを Phase 2 で head-to-head比較して選ぶ。
+5. **haqumei は "rule 天井" であり "NN 天井" ではない (v1.3 反映)**。徹底解剖の結果、PER 1.17% の 80-90% は pyopenjtalk-plus 辞書由来、NN 由来は 0-5% のみ (Kanalizer が英単語遭遇時のみ発火)。**同じ pyopenjtalk-plus 辞書を採用しつつ、ModernBERT を BAS/多音字/略語判定/アクセント推定に投入する設計で、haqumei が持たない改善軸で戦える**。詳細: `docs/research/02_existing_systems.md §A.3`
 
 ## 主要な数値目標
 
 | 指標 | ベースライン | 目標 | Stretch |
 |---|---|---|---|
-| JSUT Basic5000 PER | haqumei 1.17% | < 1.0% | < 0.5% |
+| JSUT Basic5000 PER (haqumei-eval と同一プロトコル) | haqumei 1.17% | < 1.0% | < 0.5% |
 | JVS-3000 kana CER | OpenJTalk 1.03% | < 0.9% | < 0.62% (Gemini越え) |
-| ROHAN KER | haqumei 1.64% | < 1.5% | < 1.0% |
-| JSUT モーラアクセント精度 | Hida 97.33% | > 97.5% | > 98% |
+| ROHAN KER (haqumei-eval と同一プロトコル) | haqumei 1.64% | < 1.5% | < 1.0% |
+| JSUT モーラアクセント精度 (**haqumei 非公表、我々が公表**) | Hida 97.33% | > 97.5% | > 98% |
+| 多音字 hard-set PER | (haqumei 数値なし → 我々が公表) | haqumei との差 ≥ 0.5pt | ≥ 1.0pt |
+| 英字略語 hard-set PER | (同上) | haqumei との差 ≥ 0.5pt | ≥ 1.0pt |
+| 固有名詞 hard-set PER | (同上) | haqumei との差 ≥ 0.5pt | ≥ 1.0pt |
 
 ## ベースモデル選定 (推奨: sbintuitions/modernbert-ja-130m)
 

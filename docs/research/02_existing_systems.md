@@ -29,18 +29,94 @@
 - **弱み**: 本家と同じくルール/辞書由来の限界を継承
 - **示唆**: **学習データ生成の主要ソース**。辞書から (漢字表記, 読み仮名, アクセント型) のトリプルを大量取得可能。
 
-### A.3 haqumei (**現時点のOSS SOTA相当**)
+### A.3 haqumei (**現時点のOSS SOTA相当** — **v0.8.0 徹底解剖 by v1.3**)
 
-- **リポジトリ**: [o24s/haqumei](https://github.com/o24s/haqumei)
-- **中身**: 修正版Open JTalk + pyopenjtalk-plus辞書 + オプションのONNXニューラル外来語モデル (haqumei-kanalizer)
-- **公開ベンチマーク結果**:
-  - JSUT Basic5000 (prj-beatrice/jsut-label, use_unidic_yomi=true): **PER 1.17%** (S=2117, D=527, I=831, N=297843)
-  - ROHAN: **KER 1.64%** (S=1689, D=493, I=288, N=150637)
-- **強み**: OSSで最も低いPER/KER。実装が公開されていて再現可能。
-- **弱み**:
-  - Self-reported 数値 (査読論文ではない)
-  - モデルアーキテクチャがハイブリッドで解釈が難しい
-- **示唆**: **必ずベースラインとして再現・比較する**。特にどの Errore カテゴリ (S=Substitute, D=Delete, I=Insert) が多いかを分析することで、我々のモデルで狙うべき失敗モードが特定できる。ソース: [haqumei README](https://github.com/o24s/haqumei)
+- **リポジトリ**: [o24s/haqumei](https://github.com/o24s/haqumei) (Apache-2.0, 2025-11-16 created, star=4 as of 2026-07-03)
+- **一言実体**: **Rust 実装の Open JTalk (pyopenjtalk-plus 辞書 + jlabel + 修正版 open_jtalk C/C++ ソース) のリライトであり、NN 化されているのは英単語→カタカナ変換用の VOICEVOX/kanalizer (LSTM seq2seq ONNX) のみ**
+
+#### A.3.1 アーキテクチャ内訳 (rule vs NN)
+
+| Component | 種別 | 役割 |
+|---|---|---|
+| `vendor/open_jtalk` (C/C++) | **rule/FST** | 形態素→フルコン→音素の中核 (tsukumijima/open_jtalk フォーク) |
+| `haqumei/dictionary` | **dict** | pyopenjtalk-plus 辞書を埋め込み |
+| `haqumei-jlabel` | **rule** | HTS フルコンテキストラベル拡張 (jpreprocess/jlabel 由来, BSD-3) |
+| `vendor/vibrato-rkyv` (submodule) | **rule/dict** | 形態素解析 (rkyv 化 vibrato) |
+| **`haqumei-kanalizer`** | **NN (ONNX, 計 ~9MB)** | 英単語→カタカナ音写 (VOICEVOX/kanalizer 由来, MIT) |
+| `haqumei-eval` | script | 評価パイプライン |
+| options (`use_unidic_yomi` / `normalize_iu` etc) | **rule** | 後処理 |
+
+**NN が発火するのは英単語遭遇時のみ**。それ以外は完全に rule/dict。
+
+#### A.3.2 内部 NN (Kanalizer) の詳細
+
+- Encoder ONNX 3.72 MB, Decoder ONNX 5.19 MB (計 ~9 MB)
+- 隠れ次元 DIM=256、出力語彙 86 カタカナ (SOS/EOS 含む)、入力 ASCII 28 種
+- **2層 LSTM/GRU + attention seq2seq** (VOICEVOX kanalizer の PyTorch 実装がそのまま ONNX 化)
+- 学習データ: VOICEVOX/kanalizer-dataset 118k エントリ (英単語↔カナのペア, CC0 相当)
+- 学習コードは o24s ではなく上流 VOICEVOX/kanalizer 側 (haqumei は推論のみ)
+- 復号: Greedy / TopK / TopP を切替可能。デフォルト greedy
+
+#### A.3.3 公開ベンチマーク結果と一次資料
+
+`haqumei-eval` (README の Accuracy セクション) より:
+
+- **JSUT (prj-beatrice/jsut-label / basic5000, `phone_level3`) PER = 1.17%**
+  - S=2117, D=527, I=831, N=297,843
+  - Options: `HaqumeiOptions { use_unidic_yomi: true, normalize_iu: Some(Yuu) }`
+  - `pau` (無音) 無視、`g2p_mapping_batch` 使用
+- **ROHAN (mmorise/rohan4600) カナ KER = 1.64%**
+  - S=1689, D=493, I=288, N=150,637
+  - Options: `HaqumeiOptions { revert_long_vowels: true, revert_yotsugana: true }`
+  - `g2k_per_word` 文字単位 Levenshtein
+
+Issues/Discussions は open=0, closed=0。他の一次数値は公表されていない。
+
+#### A.3.4 PER 1.17% の由来分解 (推定)
+
+| 由来 | 寄与率 | 内容 |
+|---|---|---|
+| **辞書由来** (pyopenjtalk-plus 辞書 + UniDic 読み) | **80-90%** ← 支配的 | `use_unidic_yomi: true` |
+| 後処理由来 (`normalize_iu: Yuu` の「言う」→「ユー」表記統一 等) | 10-15% | 純粋 rule |
+| **NN 由来** (Kanalizer) | **0-5%** | JSUT basic5000 は英単語がごく少数、寄与はほぼ無視 |
+
+**結論**: haqumei の 1.17% は事実上「pyopenjtalk-plus 辞書 + 表記正規化」の性能。**haqumei は "rule 天井" であり "NN 天井" ではない**。
+
+#### A.3.5 弱点カテゴリ (本プロジェクトが越えるための攻撃ポイント)
+
+1. **アクセント句連続変異 (BAS/accent sandhi) 補正 NN が存在しない** — Open JTalk のアクセント結合規則そのまま → NHK Kurihara 2024 TJ-G2P+BAS 相当を打ち込めば勝てる余地
+2. **多音字曖昧性解消 NN が存在しない** — 「行った (いった/おこなった)」等は辞書優先度依存
+3. **アクセント精度 (mora accuracy) 未公表** — 我々が公開すれば自動的に情報優位
+4. **英字略語判定 (AI→エーアイ vs NASA→ナサ) が辞書登録依存** — Kanalizer は英単語音写のみで略語読み判定はしない
+5. **未知語は `pau` (無音) 落とし** (Open JTalk 準拠) — 固有名詞・新語で顕在化
+6. **`g2p_mapping` 系 API でしか未知語が拾えない** — 標準 g2p は情報を捨てる
+7. **Issue tracker 完全に空 (v0.8.0, 2026-07-03 時点 star=4)** — コミュニティ検証不足
+
+#### A.3.6 再現可能性
+
+**Yes (完全再現可能)**。`haqumei-eval/build.rs` が `basic5000.yaml` を SHA256 pin (`1e5bf40...`) 検証込で自動 DL。ROHAN は `resources/Rohan4600_transcript_utf8.txt` に同梱。
+
+```bash
+git clone https://github.com/o24s/haqumei && cd haqumei
+git checkout v0.8.0
+git submodule update --init
+cargo run -p haqumei-dict-tool -- ...
+cargo run --release -p haqumei-eval
+# → basic5000_report.txt (PER 1.17%), rohan4600_kana_report.txt (KER 1.64%)
+```
+
+Python 版: `pip install haqumei` (Linux x86_64/aarch64, macOS aarch64, Windows x86_64 の wheel あり)。
+
+#### A.3.7 本プロジェクトの示唆
+
+- **必ずベースラインとして再現・比較する** (AC-P0)
+- **同じ pyopenjtalk-plus 辞書を採用する** (CR-26) — フェアな比較の前提
+- **haqumei-eval と同一プロトコル** で評価スクリプトを実装する (CR-27)
+- **ModernBERT を BAS + polyphone + アクセント推定 + 略語判定** に投入 — haqumei が持たない改善軸で戦える
+- **S/D/I エラーカテゴリ分解** を評価レポートに含めることで、どの改善が効いたかを見える化する
+- Model Card に「同じ辞書での NN 追加寄与」を明記することで、pure-NN の弱さ (07 調査結果) と合わせて hybrid strategy の正当性を示す
+
+ソース: [haqumei README](https://github.com/o24s/haqumei/blob/main/README.md), [haqumei-eval/build.rs](https://github.com/o24s/haqumei/blob/main/haqumei-eval/build.rs), [haqumei-eval/src/main.rs](https://github.com/o24s/haqumei/blob/main/haqumei-eval/src/main.rs), [haqumei-kanalizer constants.rs](https://github.com/o24s/haqumei/blob/main/haqumei-kanalizer/src/constants.rs), [v0.8.0 release](https://github.com/o24s/haqumei/releases/tag/v0.8.0)
 
 ### A.4 その他のルール系
 

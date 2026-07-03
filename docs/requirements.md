@@ -1,8 +1,8 @@
 # 要求定義書 — ModernBERT日本語G2P
 
-**バージョン:** 1.2
-**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映)
-**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、および Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)
+**バージョン:** 1.3
+**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映 / v1.3 haqumei深掘り反映)
+**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)、および **haqumei徹底解剖 (v0.8.0 コード全体)** に基づく「rule天井」判定
 **ステータス:** **Phase 0 開始可** (v1.2 で全 blocker 解決)
 
 ---
@@ -130,6 +130,22 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **FR-34** [MAY]: Rust bindings (haqumei互換) を提供する
 - **FR-35** [MUST] (**v1.1 追加**): pyopenjtalk 互換テストスイート (最小 1,000文) を CI で実行し、辞書ヒット入力の出力一致率 **≥ 99.0%** を維持する (ドロップイン置換の実質保証)
 
+### 2.5a haqumei 越えのための攻撃戦略 (**v1.3 追加、primary benchmark 分析**)
+
+haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_existing_systems.md §A.3`):
+
+- **haqumei の PER 1.17% は事実上「pyopenjtalk-plus 辞書 + `use_unidic_yomi` + `normalize_iu` 後処理」の性能** (辞書由来 80-90%, 後処理 10-15%, NN 由来 0-5%)
+- **haqumei で NN が発火するのは英単語遭遇時のみ** (Kanalizer ONNX 9MB, 2層 LSTM+attention seq2seq)
+- **haqumei は "rule 天井"** であり "NN 天井" ではない — 本プロジェクトが ModernBERT で狙う領域と重複しない
+
+以下の攻撃ポイントを明示的に要件化する:
+
+- **FR-50** [MUST]: **アクセント連続変異 (BAS/accent sandhi) 補正**を実装する — haqumei は Open JTalk 規則そのままで NN補正なし
+- **FR-51** [MUST]: **多音字曖昧性解消 NN** を実装する — haqumei は辞書優先度依存 (「行った (いった/おこなった)」等)
+- **FR-52** [MUST]: **英字略語判定 NN** (AI→エーアイ vs NASA→ナサ) を実装する — haqumei の Kanalizer は音写のみで判定不可
+- **FR-53** [MUST]: **未知語処理**を改善する — haqumei は Open JTalk 準拠で未知語を `pau` (無音) 落としする、これを固有名詞/新語で顕在化する failure と位置付け解消
+- **FR-54** [SHOULD]: **mora accent accuracy を公開評価指標として公表する** — haqumei は未公表領域、公表することで自動的に情報優位
+
 ### 2.5 モデル配布
 
 - **FR-40** [MUST]: PyTorch (Hugging Face Transformers) 形式で配布する
@@ -157,6 +173,9 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | **NFR-02**: JSUT Basic5000 PER | haqumei 1.17% | < 1.17% | < 0.5% | [03 §1.2] |
 | **NFR-03**: ROHAN 4600 KER | haqumei 1.64% | < 1.64% | < 1.0% | [03 §1.3] |
 | **NFR-04**: JSUT モーラアクセント精度 | Hida 97.33% | > 97.33% | > 98% | [04 §A.3] |
+| **NFR-05** (v1.3): **haqumei と同一プロトコルの JSUT PER** | haqumei 1.17% | < 1.17% (差 ≥ 0.15pt) | < 0.5% | haqumei-eval + [02 §A.3] |
+| **NFR-06** (v1.3): **haqumei と同一プロトコルの ROHAN KER** | haqumei 1.64% | < 1.64% (差 ≥ 0.15pt) | < 1.0% | haqumei-eval + [02 §A.3] |
+| **NFR-07** (v1.3): **本プロジェクト独自公表指標 — JSUT モーラアクセント精度公表** (haqumei 非公表領域) | (haqumei は非公表) | 必ず公表する | > 98% | 情報優位獲得 |
 
 ### 3.2 Hard-set 精度 (per-category)
 
@@ -169,6 +188,11 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **NFR-14** [MUST]: 数詞 / 日付 / 時刻 / 単位 hard-set の PER が pyopenjtalk baseline を上回る
 - **NFR-15** [MUST]: **英単語混在文 hard-set (英単語+日本語混在文 200文) の PER が pyopenjtalk baseline を上回る** — 「iPhone を買った」「PDF を開く」等
 - **NFR-16** [MUST]: **英字略語 hard-set (AI/NASA/HTML/e-mail等の混在文 200文) の PER が pyopenjtalk baseline を上回る**
+- **NFR-17** [MUST] (**v1.3 追加、haqumei 弱点狙い**): **7 hard-set 全カテゴリで haqumei baseline を上回る**こと。**特に以下で 0.5pt 以上の差をつけること** (haqumei に NN 補正がない領域):
+  - **多音字 hard-set** (haqumei は辞書優先度依存)
+  - **英字略語 hard-set** (haqumei は音写のみで読み判定なし)
+  - **固有名詞 hard-set** (haqumei は未知語 `pau` 落とし)
+  - **アクセント連続変異を含む文** (haqumei は Open JTalk 規則そのまま)
 
 ### 3.3 推論性能
 
@@ -285,6 +309,14 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **CR-23** [MUST] (**v1.2 追加**): **JMDict は推論時 runtime lookup にのみ使用** — training gradient に含めない設計を実装する (Style-Bert-VITS2 + Misaki 先例)
 - **CR-24** [MUST] (**v1.2 追加**): **JSUT Basic5000 と JVS-3000 kana は評価専用**、学習コーパスから自動的に除外する CI check を設ける (data leakage 防止)
 - **CR-25** [SHOULD] (**v1.2 追加**): permissive-only スタック (Aozora 1.6M + UniDic + pyopenjtalk-plus + llm-jp-corpus) だけで 100万文コーパスを構築するオプションを常に維持する (Wikipedia依存の代替として)
+- **CR-26** [MUST] (**v1.3 追加**): **pyopenjtalk-plus 辞書 (tsukumijima/pyopenjtalk-plus) を hybrid path の primary 辞書に採用する** — haqumei と同一辞書を採用することでフェアな比較を確保 (haqumei の PER 1.17% は辞書由来 80-90% のため、辞書を変えると比較の意味が失われる)
+- **CR-27** [MUST] (**v1.3 追加**): **haqumei-eval と同一プロトコルの評価スクリプトを実装する**:
+  - JSUT: prj-beatrice/jsut-label の `basic5000.yaml` を SHA256 pin で使用 (haqumei-eval と同一データ)
+  - `pau` (無音) を無視した Levenshtein 距離ベース PER 計算
+  - `phone_level3` を canonical レベルとする
+  - `HaqumeiOptions { use_unidic_yomi: true, normalize_iu: Some(Yuu) }` 相当の前処理を実装
+  - ROHAN 側は `g2k_per_word` 文字単位 Levenshtein に準拠
+- **CR-28** [MUST] (**v1.3 追加**): **haqumei と本プロジェクトの評価を同一マシン・同一辞書バージョンで並走**する CI ジョブを設ける。両者の差分表を各リリースに添付する
 
 ### 4.4 開発フロー
 
@@ -483,12 +515,15 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 | 1.0 | 2026-07-03 | 初版。調査01〜08を統合したドラフト | (Phase 0 前に確定要) |
 | 1.1 | 2026-07-03 | 追加調査(A計算コスト実測・B先行研究Ablation) を反映して10領域を補強。**国際化スコープの明示** / **バージョニング(SemVer)** / **Ablation具体化(NFR-33〜38)** / **計算コスト規定(NFR-60〜64)** / **性能回帰CI(NFR-70〜73)** / **段階リリース(α→β→1.0)** / **悪用防止・コンプライアンス** / **依存関係バージョン明示** / **pyopenjtalk互換テスト(FR-35)** / **多言語混在対応をMoSCoW MUSTに昇格** | (Phase 0 前に確定要) |
 | **1.2** | **2026-07-03** | **Phase 0 blocker 5件の並列調査結果を反映して OPEN-01〜05 のうち4件を解決**。(1) OPEN-01=✅JVS-3000 は CyberAgent AI Lab GitHub で公開、(2) OPEN-02=✅Wikipedia CC-BY-SA-4.0 は先例あり Apache-2.0 weights で配布可 (Japanese StableLM/LLM-jp-3 先例)、(3) OPEN-05=✅**ライセンスを Apache-2.0 に確定**、(4) JSUT テキストが CC-BY-SA-4.0 と判明 → eval only 分離を CR-24 で強制、(5) JMDict は runtime lookup のみ許可 (CR-23)、(6) Vast.ai を primary クラウドに確定 (RTX 4090 primary, RTX 3090 fallback)、(7) Hard-set キュレーションは LLM半自動 (C案) を primary手法に確定 | **Phase 0 開始可** |
+| **1.3** | **2026-07-03** | **haqumei v0.8.0 徹底解剖の結果を反映**。(1) **haqumei は "rule 天井"** — PER 1.17% の 80-90% は pyopenjtalk-plus 辞書由来、NN 由来はわずか 0-5% (Kanalizerは英単語遭遇時のみ発火)、(2) 攻撃ポイント FR-50〜54 追加 (BAS / polyphone / 略語判定 / 未知語処理 / mora accuracy 公表)、(3) haqumei-eval と同一プロトコル評価スクリプト実装を CR-27 で強制、(4) pyopenjtalk-plus 辞書採用を CR-26 で primary辞書として確定、(5) haqumei との並走 CI を CR-28 で追加、(6) 弱点カテゴリ (多音字/略語/固有名詞/連続変異) で haqumei に対し 0.5pt 以上の差をつけることを NFR-17 で強制、(7) mora accent accuracy を独自公表指標として NFR-07 に追加 (haqumei 非公表領域で情報優位) | Phase 0 開始可 |
 
 ---
 
 ## 12. 一言まとめ
 
 **本プロジェクトは「ModernBERT を単一の pyopenjtalk 置換モデルにする」のではなく、「haqumei/pyopenjtalk が崩れる領域 (アクセント連続変異 / 多音字 / OOV / 英日混在) を、市場に存在しない fine-tuned encoder NN で狙い撃ちで補正するハイブリッド」を作る**。
+
+**v1.3 の重要な追加洞察**: haqumei 徹底解剖 (v0.8.0) の結果、**haqumei の PER 1.17% はほぼ完全に "pyopenjtalk-plus 辞書 + 表記正規化" 由来** (NN 由来はわずか 0-5%)。つまり **haqumei は "rule 天井" であり "NN 天井" ではない**。本プロジェクトの ModernBERT が狙う BAS / polyphone / アクセント推定 / 略語判定は **haqumei が原理的に持たない改善軸** — 同じ pyopenjtalk-plus 辞書を採用しつつ NN 補正を上乗せする設計で、原理的に haqumei を上回れる。
 
 要求定義の骨子は、この設計哲学を以下の**5層**でロックしている:
 
