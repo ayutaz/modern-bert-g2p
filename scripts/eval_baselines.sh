@@ -9,13 +9,30 @@
 # 未作成のスクリプトは自動 skip、失敗は fail-fast (exit 1)。
 #
 # Usage:
-#   bash scripts/eval_baselines.sh
+#   bash scripts/eval_baselines.sh                 # run all 3 (default)
+#   bash scripts/eval_baselines.sh all             # run all 3
+#   bash scripts/eval_baselines.sh haqumei_jsut    # run one target only
+#   bash scripts/eval_baselines.sh pyopenjtalk_jvs
+#   bash scripts/eval_baselines.sh haqumei_rohan
 #
-# 出力:
-#   results/baselines.json                       # 最新結果 (上書き)
-#   results/history/baselines_<timestamp>.json   # 履歴
-#   results/logs/<eval>_<timestamp>.log          # 各 eval の生ログ
+# 出力 (results/baselines.json は "all" 実行のときのみ上書き。
+#       単一 target のときは results/baselines_<target>.json に書く。
+#       これで matrix 並列実行が互いに上書きしない — F1 修正):
+#   results/baselines.json                                # all target 用
+#   results/baselines_<target>.json                       # 単一 target 用
+#   results/history/baselines_<label>_<timestamp>.json    # 履歴
+#   results/logs/<eval>_<timestamp>.log                    # 各 eval の生ログ
 set -euo pipefail
+
+TARGET="${1:-all}"
+case "$TARGET" in
+  all|haqumei_jsut|pyopenjtalk_jvs|haqumei_rohan) ;;
+  *)
+    echo "ERROR: unknown target '$TARGET'." >&2
+    echo "Valid: all | haqumei_jsut | pyopenjtalk_jvs | haqumei_rohan" >&2
+    exit 2
+    ;;
+esac
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
@@ -40,8 +57,12 @@ fi
 source "$VENV/bin/activate"
 
 # ---- 2. deps -------------------------------------------------------------
-echo "[setup] installing deps (haqumei==0.8.0 pyopenjtalk pyyaml)..." >&2
-uv pip install --quiet haqumei==0.8.0 pyopenjtalk pyyaml
+echo "[setup] installing deps (haqumei==0.8.0 pyopenjtalk-plus pyyaml jiwer tqdm)..." >&2
+# NB: pyopenjtalk-plus is the ~800K-entry-dict fork mandated by CLAUDE.md
+# (§ "設計の核心思想 5"). Falls back to pyopenjtalk if the plus fork is not
+# available on the current index — Phase 0 finish critique F3.
+uv pip install --quiet haqumei==0.8.0 pyyaml jiwer tqdm
+uv pip install --quiet pyopenjtalk-plus || uv pip install --quiet pyopenjtalk
 
 # ---- 3. datasets (idempotent) --------------------------------------------
 clone_if_missing() {
@@ -91,14 +112,38 @@ run_eval() {
     "$name" "$metric" "$value" "$log"
 }
 
+skipped_target() {
+  local name="$1"
+  printf '{"name":"%s","status":"filtered","reason":"target_arg=%s"}' "$name" "$TARGET"
+}
+
 # fail-fast: if a script exists but crashes, we abort. Missing scripts skip.
-HAQ_JSUT_JSON=$(run_eval haqumei_jsut  "$REPO/scripts/eval_haqumei_jsut.py"    PER)
-PYOJT_JVS_JSON=$(run_eval pyopenjtalk_jvs "$REPO/scripts/eval_pyopenjtalk_jvs.py" CER)
-HAQ_ROHAN_JSON=$(run_eval haqumei_rohan "$REPO/scripts/eval_haqumei_rohan.py"    KER)
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "haqumei_jsut" ]; then
+  HAQ_JSUT_JSON=$(run_eval haqumei_jsut  "$REPO/scripts/eval_haqumei_jsut.py"    PER)
+else
+  HAQ_JSUT_JSON=$(skipped_target haqumei_jsut)
+fi
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "pyopenjtalk_jvs" ]; then
+  PYOJT_JVS_JSON=$(run_eval pyopenjtalk_jvs "$REPO/scripts/eval_pyopenjtalk_jvs.py" CER)
+else
+  PYOJT_JVS_JSON=$(skipped_target pyopenjtalk_jvs)
+fi
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "haqumei_rohan" ]; then
+  HAQ_ROHAN_JSON=$(run_eval haqumei_rohan "$REPO/scripts/eval_haqumei_rohan.py"    KER)
+else
+  HAQ_ROHAN_JSON=$(skipped_target haqumei_rohan)
+fi
 
 # ---- 5. persist JSON -----------------------------------------------------
-LATEST_JSON="$RESULTS_DIR/baselines.json"
-HISTORY_JSON="$HISTORY_DIR/baselines_${TIMESTAMP}.json"
+# For a single-target run we write to results/baselines_<target>.json so
+# concurrent matrix jobs (test-integration.yml) do not clobber each other.
+if [ "$TARGET" = "all" ]; then
+  LATEST_JSON="$RESULTS_DIR/baselines.json"
+  HISTORY_JSON="$HISTORY_DIR/baselines_all_${TIMESTAMP}.json"
+else
+  LATEST_JSON="$RESULTS_DIR/baselines_${TARGET}.json"
+  HISTORY_JSON="$HISTORY_DIR/baselines_${TARGET}_${TIMESTAMP}.json"
+fi
 
 python - "$LATEST_JSON" "$HISTORY_JSON" "$TIMESTAMP" \
   "$HAQ_JSUT_JSON" "$PYOJT_JVS_JSON" "$HAQ_ROHAN_JSON" <<'PY'

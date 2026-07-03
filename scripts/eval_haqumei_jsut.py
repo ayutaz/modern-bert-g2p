@@ -44,7 +44,6 @@ from haqumei import Haqumei, IuPronunciation  # noqa: E402
 
 from modernbert_g2p.metrics.per import compute_per  # noqa: E402
 
-
 JSUT_YAML = Path(os.environ.get("JSUT_YAML", "jsut-label/text_kana/basic5000.yaml"))
 
 
@@ -67,7 +66,7 @@ def main():
     hyps_all = hq.g2p_batch(texts)
 
     S_total = D_total = I_total = N_total = 0
-    for hyp_all, ref in zip(hyps_all, refs):
+    for hyp_all, ref in zip(hyps_all, refs, strict=True):
         # compute_per handles ignore={"pau"} and devoicing normalization; passing
         # raw sequences here keeps this script in lockstep with unit tests.
         result = compute_per(hyp_all, ref)
@@ -80,7 +79,7 @@ def main():
     print()
     print("=== haqumei JSUT Basic5000 PER (Python replication) ===")
     print(f"N={N_total}  S={S_total}  D={D_total}  I={I_total}  PER={per:.4f}%")
-    print(f"Official (haqumei README): N=297843  S=2117  D=527  I=831  PER=1.17%")
+    print("Official (haqumei README): N=297843  S=2117  D=527  I=831  PER=1.17%")
     print(f"Diff: {abs(per - 1.17):.4f} pt")
     if abs(per - 1.17) <= 0.1:
         print(">>> AC-P0 PASSED (within +/- 0.1%)")

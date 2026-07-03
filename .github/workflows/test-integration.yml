@@ -1,0 +1,130 @@
+name: test-integration
+
+# NOTE: schedule: is intentionally disabled until Phase 1 corpus provisioning
+# (JSUT / JVS-nonpara-kana / ROHAN 4600) is in place. Running weekly against an
+# empty checkout would report a permanent green "passing" while validating
+# nothing, per Phase 0 finish critique F10. Trigger manually only.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Baseline to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - haqumei_jsut
+          - pyopenjtalk_jvs
+          - haqumei_rohan
+
+permissions:
+  contents: read
+
+jobs:
+  baselines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [haqumei_jsut, pyopenjtalk_jvs, haqumei_rohan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter target by workflow input
+        id: filter
+        run: |
+          SEL="${{ github.event.inputs.target || 'all' }}"
+          TGT="${{ matrix.target }}"
+          if [ "$SEL" != "all" ] && [ "$SEL" != "$TGT" ]; then
+            echo "SKIP: $TGT (input=$SEL) — not selected."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup uv
+        if: steps.filter.outputs.run == 'true'
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+
+      - name: Install OpenJTalk system deps
+        if: steps.filter.outputs.run == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            open-jtalk open-jtalk-mecab-naist-jdic build-essential
+
+      - name: Install Python 3.12
+        if: steps.filter.outputs.run == 'true'
+        run: uv python install 3.12
+
+      - name: Sync deps (dev + baselines)
+        if: steps.filter.outputs.run == 'true'
+        run: uv sync --extra dev --extra baselines
+
+      # Corpus paths are aligned with what each eval script actually consumes.
+      # eval_haqumei_jsut.py       -> JSUT_YAML (file)
+      # eval_pyopenjtalk_jvs.py    -> --dataset_dir (dir containing csv)
+      # eval_haqumei_rohan.py      -> --transcript (file)
+      # If the corpus is absent we emit a ::warning:: annotation and exit 0 so
+      # the workflow stays green — real regression is only enforced when a
+      # runner has the corpora mounted (self-hosted or private data source).
+      - name: Check corpus availability
+        if: steps.filter.outputs.run == 'true'
+        id: corpus
+        run: |
+          set -u
+          case "${{ matrix.target }}" in
+            haqumei_jsut)
+              P="${JSUT_YAML:-data/jsut-label/text_kana/basic5000.yaml}"
+              if [ -f "$P" ]; then
+                echo "present=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "::warning::JSUT yaml missing at $P — SKIP haqumei_jsut"
+                echo "present=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            pyopenjtalk_jvs)
+              P="${JVS_DATASET_DIR:-data/jvs_nonpara_kana}"
+              if [ -f "$P/jvs_nonpara_kana.csv" ]; then
+                echo "present=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "::warning::JVS csv missing at $P/jvs_nonpara_kana.csv — SKIP pyopenjtalk_jvs"
+                echo "present=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            haqumei_rohan)
+              P="${ROHAN_TRANSCRIPT:-data/haqumei_source/haqumei/resources/Rohan4600_transcript_utf8.txt}"
+              if [ -f "$P" ]; then
+                echo "present=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "::warning::ROHAN transcript missing at $P — SKIP haqumei_rohan"
+                echo "present=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+          esac
+
+      - name: Reproduce baseline
+        if: steps.filter.outputs.run == 'true' && steps.corpus.outputs.present == 'true'
+        run: bash scripts/eval_baselines.sh ${{ matrix.target }}
+
+      - name: Report skip
+        if: steps.filter.outputs.run == 'true' && steps.corpus.outputs.present != 'true'
+        run: |
+          echo "SKIPPED ${{ matrix.target }} — corpus absent (graceful skip)."
+          echo "Provision the corpus via a self-hosted runner or private data source and rerun."
+
+      - name: Upload results artifact
+        if: steps.filter.outputs.run == 'true' && steps.corpus.outputs.present == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baselines-${{ matrix.target }}-${{ github.run_id }}
+          path: |
+            results/baselines*.json
+            results/logs/
+          if-no-files-found: ignore

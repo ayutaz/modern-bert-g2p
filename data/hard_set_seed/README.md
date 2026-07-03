@@ -1,12 +1,12 @@
 # Hard-set Seed Curation
 
-This directory holds the **seed** (21 fully-labeled examples) for the Phase 1
-hard-set — the 7 × 200 = **1,400-sentence** human-curated evaluation set
-mandated by `CLAUDE.md` §"Hard-set". The seed:
+This directory holds the **seed** for the Phase 1 hard-set — the 7 × 200 =
+**1,400-sentence** human-curated evaluation set mandated by
+`CLAUDE.md` §"Hard-set". The seed:
 
 1. fixes the annotation schema (`schema.json`),
-2. demonstrates the labeling conventions on 3 canonical examples per category
-   (`samples.jsonl`), and
+2. provides **140 labeled examples** (7 categories × 20 = `seed_v2`) in
+   `samples.jsonl`, and
 3. documents the semi-automatic curation SOP (this file) so the Phase 1 batch
    can be produced under a fixed budget with reproducible inter-annotator
    agreement targets.
@@ -14,13 +14,36 @@ mandated by `CLAUDE.md` §"Hard-set". The seed:
 Nothing here is training data. All 1,400 sentences are **eval-only** and are
 excluded from every training / dev split by ID.
 
-## Files
+## Version status
+
+`samples.jsonl` currently ships **seed_v2 (140 rows, 20 per category)**. This
+version is **explicitly advisory, not Phase-1 gold**:
+
+- Single-curator provenance (project lead + Claude Sonnet 4.5 pre-annotation).
+- Two-annotator Cohen κ ≥ 0.70 measurement is **deferred to Phase 1** (see
+  Phase 0 finish critique F5). Annotator B does not exist yet.
+- Individual accent labels default to canonical NHK 2016 patterns; a subset
+  admits alternative Tokyo-Yamanote readings — flagged in `notes` per row.
+- Hard-case examples were mined from **external linguistic difficulty
+  signals** (minimal pairs, rendaku/sokuon rules, extended-JULIUS syllable
+  need, CamelCase word boundaries) BEFORE any model was evaluated on them,
+  avoiding the "haqumei-adversarial by construction" bias called out as
+  critique F4. haqumei/pyopenjtalk-plus predictions on this set will be
+  measured post-hoc for reporting purposes, not for gating inclusion.
+
+Statistical note (F9): at n=20 per category the 95% Wilson CI on PER is
+approximately ±15 pp, i.e. **too coarse to statistically detect a 0.5-pp
+delta**. Treat seed_v2 as a regression anchor and qualitative probe, not as
+the primary metric. Phase 1 scales to ≥ 200/category which brings the CI
+into the ±3-pp range needed for the delta targets in `CLAUDE.md`.
+
+Files:
 
 | File | Purpose |
 |---|---|
 | `schema.json` | JSON Schema Draft 2020-12 for one gold label. Enforced in CI. |
-| `samples.jsonl` | 21 seed examples (7 categories × 3), all passing `schema.json`. |
-| `README.md` | This file — curation SOP, agreement targets, cost budget. |
+| `samples.jsonl` | 140 seed examples (7 categories × 20), all passing `schema.json`. |
+| `README.md` | This file — version status, curation SOP, agreement targets, cost budget. |
 
 ## Categories (7)
 
@@ -212,8 +235,10 @@ covers the machine scaffold this seed unlocks.
 When Phase 1 starts, do the following in order:
 
 1. Freeze `schema.json` at v1.0 and tag `hard-set-schema-v1.0`.
-2. Copy `samples.jsonl` into `data/hard_set/gold.jsonl` as the first 21
-   rows, keeping IDs stable.
+2. Copy `samples.jsonl` into `data/hard_set/gold.jsonl` as the first 140
+   rows (seed_v2), keeping IDs stable. Seed_v2 rows enter Phase 1 as
+   **advisory anchors**, not gold — they receive a κ pass just like the
+   remaining 1,260 rows before being merged into the final gold set.
 3. Draft `scripts/curation/prompts/hard_set_v1.txt` using the notes in this
    file as the annotation manual.
 4. Recruit two annotators (native Tokyo-Yamanote speakers with prior
@@ -223,6 +248,30 @@ When Phase 1 starts, do the following in order:
    english_mixed → english_abbreviation.
 6. After each category of 200, publish a κ report. Do not proceed to the
    next category if κ < 0.70 on the just-finished one.
+
+## Known gaps in seed_v2 (140-row release)
+
+Recorded here so Phase 1 curators can prioritize adjudication:
+
+- **Accent tier ambiguity** — several seed rows lock a single Tokyo-Yamanote
+  variant (e.g. `上手=じょうず` as 尾高3 vs 平板 for na-adjective; `話` as
+  頭高 vs 尾高). Notes on each affected row cite the NHK 2016 canonical
+  form; Phase 1 blind pass may adjust.
+- **Compound accent** — accent phrases in modifier + head noun / number +
+  counter constructs often can be realized as one or two APs. Seed_v2
+  standardizes on the two-AP split for readability; this bumps
+  boundary counts slightly high relative to fast-speech reality.
+- **English abbreviation reading variant** — `WHO`, `SIM`, `IT`, `AI` are
+  spell-vs-word context-dependent. seed_v2 encodes a single variant per row
+  in `notes` (`spell` / `word`) inline; a formal `reading_variant`
+  optional field is proposed for schema v1.1 (see Phase 0 finish critique
+  minor point).
+- **Long vowels** — canonicalized as vowel repetition (`k o o`, `s e e`,
+  `s h u u`) per §Labeling conventions. No `:` or `ー` appears; validator
+  MUST reject those.
+- **Rare surname readings** (`御手洗`, `四月一日=わたぬき`, `小鳥遊`)
+  are single-source (project lead); Phase 1 should double-check against
+  JMDict place-names / 全国難読地名辞典 before finalizing.
 
 ## Provenance & disagreement with haqumei
 

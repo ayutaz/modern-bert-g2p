@@ -28,14 +28,13 @@ import argparse
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple
 
 
 # ---------------------------------------------------------------------------
 # Levenshtein (character-level, unit costs) — mirrors compute_edit_ops in
 # haqumei-eval/src/main.rs.
 # ---------------------------------------------------------------------------
-def levenshtein_sdi(expected: str, actual: str) -> Tuple[int, int, int]:
+def levenshtein_sdi(expected: str, actual: str) -> tuple[int, int, int]:
     m = len(expected)
     n = len(actual)
     if m == 0:
@@ -109,9 +108,9 @@ def _strip_parens(text: str) -> str:
     return "".join(out)
 
 
-def load_rohan(path: Path) -> Tuple[List[str], List[str]]:
-    texts: List[str] = []
-    kanas: List[str] = []
+def load_rohan(path: Path) -> tuple[list[str], list[str]]:
+    texts: list[str] = []
+    kanas: list[str] = []
     with path.open("r", encoding="utf-8") as f:
         for raw in f:
             line = raw.rstrip("\n")
@@ -173,7 +172,7 @@ def main() -> int:
     hq = Haqumei(revert_long_vowels=True, revert_yotsugana=True)
 
     t0 = time.time()
-    preds: List[str] = []
+    preds: list[str] = []
     for start in range(0, len(texts), args.batch_size):
         chunk = texts[start : start + args.batch_size]
         per_word_batch = hq.g2k_per_word_batch(chunk)
@@ -184,7 +183,7 @@ def main() -> int:
     total_s = total_d = total_i = 0
     total_chars = 0
     sent_errors = 0
-    for gold, pred in zip(gold_kanas, preds):
+    for gold, pred in zip(gold_kanas, preds, strict=True):
         s, d, ins = levenshtein_sdi(gold, pred)
         total_s += s
         total_d += d

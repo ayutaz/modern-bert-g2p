@@ -1,0 +1,39 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  # `push` is filtered to `main` and `pull_request` to `main`, so a PR from a
+  # feature branch fires only the PR event and a merge to main fires only the
+  # push event — no double-fire on same-repo PRs.
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync dev deps
+        run: uv sync --extra dev
+
+      - name: Ruff check
+        run: uv run ruff check src/ scripts/ tests/

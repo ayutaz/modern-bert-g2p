@@ -1,0 +1,48 @@
+name: test-unit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: unit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      # haqumei / pyopenjtalk-plus normally ship manylinux wheels that bundle
+      # OpenJTalk, but if wheels fall back to source builds we need the system
+      # OpenJTalk headers. `|| true` keeps CI green on transient apt failures;
+      # `uv sync` below will surface the real error if the wheel install fails.
+      - name: Install OpenJTalk system deps (fallback for source builds)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            open-jtalk open-jtalk-mecab-naist-jdic build-essential || true
+
+      - name: Sync dev + runtime deps
+        run: uv sync --extra dev
+
+      - name: Run pytest
+        env:
+          PYTHONHASHSEED: "0"
+        run: uv run pytest tests/ -v

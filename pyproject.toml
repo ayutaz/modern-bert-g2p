@@ -25,13 +25,24 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
 ]
+# Phase 0 の modernbert_g2p パッケージ本体は metrics のみで、外部モデル依存ゼロ。
+# haqumei / pyopenjtalk-plus / jiwer は scripts/eval_*.py が使うので
+# `baselines` optional extra に切り出し、unit CI を軽量に保つ。
 dependencies = [
     "pyyaml>=6.0",
-    "haqumei==0.8.0",
-    "pyopenjtalk",
 ]
 
 [project.optional-dependencies]
+# Baseline re-production of Phase 0 targets. CLAUDE.md §"設計の核心思想 5"
+# mandates pyopenjtalk-plus (~800K-entry dict). The reported haqumei PER 1.17%
+# baseline is measured with the plus fork — bare pyopenjtalk is *not*
+# equivalent (F3 in Phase 0 finish critique).
+baselines = [
+    "haqumei==0.8.0",
+    "pyopenjtalk-plus",
+    "jiwer>=3",
+    "tqdm>=4.66",
+]
 training = [
     "torch>=2.1",
     "transformers>=4.48",
@@ -73,6 +84,16 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Baseline eval scripts follow haqumei-eval / Levenshtein SDI convention:
+# S_total / D_total / I_total / N_total mirror the mathematical variables
+# in the PER definition (Substitutions / Deletions / Insertions / N=reference
+# length). Renaming them would divorce the code from the metric spec.
+"scripts/eval_haqumei_jsut.py" = ["N806"]
+# tests exercise the 'N' JULIUS phoneme (moraic n); the test-function name
+# preserves the exact symbol under test.
+"tests/test_metrics.py" = ["N802"]
 
 [tool.mypy]
 python_version = "3.10"

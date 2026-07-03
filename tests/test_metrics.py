@@ -10,7 +10,6 @@ import pytest
 
 from modernbert_g2p.metrics import compute_cer, compute_ker, compute_per
 
-
 # ---------- PER ----------
 
 
