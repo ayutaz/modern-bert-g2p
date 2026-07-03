@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  JMDict fixture for tests/data/test_ingest_jmdict.py
+
+  Expected total rows = 12:
+    entry 1000001 : 1 keb x 1 reb                             = 1
+    entry 1000002 : 2 keb x 3 reb                             = 6
+    entry 1000003 : 2 keb x 2 reb (reb #2 re_restr limited)   = 3
+    entry 1000004 : 0 keb x 1 reb (reading used as surface)   = 1
+    entry 1000005 : 1 keb x 1 reb                             = 1
+-->
+<JMdict>
+  <entry>
+    <ent_seq>1000001</ent_seq>
+    <k_ele><keb>今日</keb></k_ele>
+    <r_ele><reb>きょう</reb></r_ele>
+  </entry>
+
+  <entry>
+    <ent_seq>1000002</ent_seq>
+    <k_ele><keb>明日</keb></k_ele>
+    <k_ele><keb>翌日</keb></k_ele>
+    <r_ele><reb>あした</reb></r_ele>
+    <r_ele><reb>あす</reb></r_ele>
+    <r_ele><reb>みょうにち</reb></r_ele>
+  </entry>
+
+  <entry>
+    <ent_seq>1000003</ent_seq>
+    <k_ele><keb>本</keb></k_ele>
+    <k_ele><keb>書</keb></k_ele>
+    <r_ele><reb>ほん</reb></r_ele>
+    <r_ele>
+      <reb>しょ</reb>
+      <re_restr>書</re_restr>
+    </r_ele>
+  </entry>
+
+  <entry>
+    <ent_seq>1000004</ent_seq>
+    <r_ele><reb>ありがとう</reb></r_ele>
+  </entry>
+
+  <entry>
+    <ent_seq>1000005</ent_seq>
+    <k_ele><keb>猫</keb></k_ele>
+    <r_ele><reb>ねこ</reb></r_ele>
+  </entry>
+</JMdict>

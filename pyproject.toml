@@ -50,6 +50,13 @@ training = [
     "omegaconf",
     "fugashi[unidic]",
 ]
+# Phase 1 data pipeline output writers and Wikipedia HTML parsing.
+# `pyarrow` is required for Parquet output (JSONL fallback works without it);
+# `lxml` is used by the Wikipedia ingest source when available.
+pipeline = [
+    "pyarrow>=15",
+    "lxml>=5",
+]
 dev = [
     "pytest>=8",
     "ruff",
@@ -94,6 +101,11 @@ ignore = ["E501"]
 # tests exercise the 'N' JULIUS phoneme (moraic n); the test-function name
 # preserves the exact symbol under test.
 "tests/test_metrics.py" = ["N802"]
+# Phase 1 data pipeline tests preserve exact JULIUS phoneme / accent-pattern
+# symbols (L, H, aType, all_L, ...) in test function names, alias schema
+# classes (Row) into local variables for fixture readability, and compare
+# module-level frozensets on the LHS of asserts to mirror the definition.
+"tests/data/*" = ["N802", "N806", "SIM300"]
 
 [tool.mypy]
 python_version = "3.10"
