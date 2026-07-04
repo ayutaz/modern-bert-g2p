@@ -88,7 +88,12 @@ def _iter_jsonl_paths(root: Path) -> Iterator[Path]:
     if root.is_file():
         yield root
         return
-    yield from sorted(root.rglob("*.json*"))
+    seen: set[Path] = set()
+    for pattern in ("*.ndjson", "*.jsonl", "*.json"):
+        for p in root.rglob(pattern):
+            if p not in seen:
+                seen.add(p)
+                yield p
 
 
 def _iter_articles(root: Path) -> Iterator[tuple[str, str]]:
