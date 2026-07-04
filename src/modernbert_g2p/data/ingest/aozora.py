@@ -90,9 +90,9 @@ class AozoraSource:
                 return
             html = _read_text(f)
             license_tag = detect_license(html)
-            parts = _HR_SPLIT.split(html, maxsplit=1)
-            body = parts[1] if len(parts) > 1 else html
-            pairs = extract_ruby_pairs_aozora(body)
+            # 青空文庫の本文 (ruby 付き) は多くの場合 header の <hr> より "前" にある。
+            # 全 HTML から ruby を抽出し、license 判定にだけ header を使う。
+            pairs = extract_ruby_pairs_aozora(html)
             if not pairs:
                 continue
             for surface, reading in pairs:
