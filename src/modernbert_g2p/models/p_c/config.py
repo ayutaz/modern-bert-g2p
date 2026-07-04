@@ -23,6 +23,30 @@ class PCConfig:
     label_smoothing: float = 0.05
     encoder_hidden: int = 768
     label_pad_id: int = -100
+    pad_class_weight: float = 1.0
+    """Multiplicative weight applied to the phoneme *pad class* (index 0) in the
+    phoneme-head CE loss.
+
+    Purpose: fight the P-C insertion pathology where the per-slot phoneme
+    head (``Linear(H, S*V)`` → reshape ``(B, L, S, V)``) receives no gradient
+    on empty slots because the collator marks them with ``-100`` (see design
+    doc ``P-C Insertion Penalty 設計分析`` §2). Coupled with a collator that
+    labels *empty in-token slots* with class ``0`` (the phoneme pad symbol)
+    while continuing to mark out-of-sequence padding with ``label_pad_id``,
+    raising ``pad_class_weight`` above ``1.0`` increases the loss penalty
+    when the model fails to emit ``<pad>`` on empty slots — pushing it to
+    suppress spurious phonemes and reducing insertion-driven PER.
+
+    Directionality (per review-1 §B1): ``F.cross_entropy(weight=w)``
+    multiplies the loss *on samples whose target is class c* by ``w[c]``.
+    So ``pad_class_weight > 1.0`` amplifies the pressure to predict pad
+    (fewer insertions); ``pad_class_weight < 1.0`` relaxes it (more
+    insertions). Default ``1.0`` is a no-op — no weight tensor is built and
+    behaviour is byte-identical to the pre-knob code path.
+
+    Range: must be ``>= 0``. Suggested sweep once the collator changes land:
+    ``{2.0, 3.0, 5.0}``.
+    """
 
     def __post_init__(self) -> None:
         if self.head_variant not in {"C1", "C2"}:
@@ -41,6 +65,10 @@ class PCConfig:
             )
         if self.encoder_hidden <= 0:
             raise ValueError(f"encoder_hidden must be positive, got {self.encoder_hidden}")
+        if self.pad_class_weight < 0.0:
+            raise ValueError(
+                f"pad_class_weight must be >= 0, got {self.pad_class_weight}"
+            )
 
     @classmethod
     def tiny(cls, head_variant: str = "C1") -> PCConfig:

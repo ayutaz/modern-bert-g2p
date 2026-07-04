@@ -193,6 +193,16 @@ def _build_classes() -> dict[str, type]:
                 self.crf: LinearChainCRF | None = LinearChainCRF(3)
             else:
                 self.crf = None
+            # Class weights for the phoneme-head CE. Registered as a buffer so it
+            # follows ``.to(device)`` / ``.cuda()`` automatically. Only allocated
+            # when the user opts in (weight != 1.0) — the default path stays
+            # byte-identical to the pre-knob code.
+            if config.pad_class_weight != 1.0:
+                weight = torch.ones(vocab, dtype=torch.float32)
+                weight[0] = float(config.pad_class_weight)
+                self.register_buffer("phon_class_weight", weight, persistent=False)
+            else:
+                self.phon_class_weight: torch.Tensor | None = None
 
         @staticmethod
         def _build_encoder(config: PCConfig) -> nn.Module:
@@ -263,9 +273,18 @@ def _build_classes() -> dict[str, type]:
             hl_vocab = self.config.hl_vocab_size
             pad_id = self.config.label_pad_id
 
+            # ``phon_class_weight`` is None when ``config.pad_class_weight == 1.0``
+            # (default), keeping this call identical to the pre-knob code path.
+            # Otherwise the class-0 (phoneme pad) target is up/down-weighted per
+            # review-1 §B1 — ``weight > 1`` amplifies pad supervision and cuts
+            # insertions; ``weight < 1`` does the opposite.
+            phon_class_weight = self.phon_class_weight
+            if phon_class_weight is not None:
+                phon_class_weight = phon_class_weight.to(dtype=phon_logits.dtype)
             phon_loss = F.cross_entropy(
                 phon_logits.reshape(-1, vocab),
                 phoneme_labels.reshape(-1).long(),
+                weight=phon_class_weight,
                 ignore_index=pad_id,
                 label_smoothing=eps,
             )

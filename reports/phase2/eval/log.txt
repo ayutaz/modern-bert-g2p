@@ -1,0 +1,70 @@
+==P-A 20260704 JSUT==
+    result = evaluate_checkpoint(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 684, in evaluate_checkpoint
+    prediction_fn = _build_prediction_fn_from_checkpoint(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 554, in _build_prediction_fn_from_checkpoint
+    raise NotImplementedError(
+NotImplementedError: evaluate_checkpoint: automatic model loading for pilot='p_a' from checkpoint=/root/modern-bert-g2p/reports/phase2/p_a/20260704/checkpoint_step_10000.pt is not yet wired. Currently implemented: p_c. Pass a `prediction_fn` keyword to bypass model construction.
+P-A eval failed (adapter stubbed)
+==P-A 20260705 JSUT==
+    result = evaluate_checkpoint(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 684, in evaluate_checkpoint
+    prediction_fn = _build_prediction_fn_from_checkpoint(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 554, in _build_prediction_fn_from_checkpoint
+    raise NotImplementedError(
+NotImplementedError: evaluate_checkpoint: automatic model loading for pilot='p_a' from checkpoint=/root/modern-bert-g2p/reports/phase2/p_a/20260705/checkpoint_step_10000.pt is not yet wired. Currently implemented: p_c. Pass a `prediction_fn` keyword to bypass model construction.
+P-A eval failed (adapter stubbed)
+==P-A 20260706 JSUT==
+    result = evaluate_checkpoint(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 684, in evaluate_checkpoint
+    prediction_fn = _build_prediction_fn_from_checkpoint(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/modern-bert-g2p/src/modernbert_g2p/evaluation/eval.py", line 554, in _build_prediction_fn_from_checkpoint
+    raise NotImplementedError(
+NotImplementedError: evaluate_checkpoint: automatic model loading for pilot='p_a' from checkpoint=/root/modern-bert-g2p/reports/phase2/p_a/20260706/checkpoint_step_10000.pt is not yet wired. Currently implemented: p_c. Pass a `prediction_fn` keyword to bypass model construction.
+P-A eval failed (adapter stubbed)
+==P-C 20260704 JSUT==
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+[eval] pilot=P-C dataset=jsut aggregate={'n_rows': 5000, 'n_ref_total': 297843, 's_total': 205394, 'd_total': 70, 'i_total': 589619, 'per_micro': 266.9470157096188, 'per_macro': 276.7348857802884}
+==P-C 20260705 JSUT==
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.decoder.bias               | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+[eval] pilot=P-C dataset=jsut aggregate={'n_rows': 5000, 'n_ref_total': 297843, 's_total': 210151, 'd_total': 95, 'i_total': 498371, 'per_micro': 237.91628475404826, 'per_macro': 246.39184004432732}
+==P-C 20260706 JSUT==
+cls.predictions.transform.dense.bias       | UNEXPECTED |  | 
+cls.predictions.bias                       | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.bias   | UNEXPECTED |  | 
+cls.predictions.decoder.weight             | UNEXPECTED |  | 
+cls.predictions.transform.LayerNorm.weight | UNEXPECTED |  | 
+cls.predictions.transform.dense.weight     | UNEXPECTED |  | 
+cls.seq_relationship.weight                | UNEXPECTED |  | 
+cls.seq_relationship.bias                  | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+[eval] pilot=P-C dataset=jsut aggregate={'n_rows': 5000, 'n_ref_total': 297843, 's_total': 207684, 'd_total': 85, 'i_total': 606566, 'per_micro': 273.4108238232895, 'per_macro': 282.8752173836132}
+==DONE==

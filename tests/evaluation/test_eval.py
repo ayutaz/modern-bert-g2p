@@ -504,16 +504,68 @@ def test_evaluate_checkpoint_missing_checkpoint_raises(tmp_path: Path) -> None:
         )
 
 
-def test_evaluate_checkpoint_no_prediction_fn_raises_not_implemented(tmp_path: Path) -> None:
+def test_evaluate_checkpoint_p_a_pilot_now_wired(tmp_path: Path) -> None:
+    """Track 4: after P-A wiring, dispatch on pilot='p_a' must NOT raise
+    NotImplementedError. The stub checkpoint may still fail downstream
+    (UnpicklingError / config mismatch / etc.), but the not-implemented
+    branch is dead code for a valid pilot."""
     ckpt = _dummy_checkpoint(tmp_path)
     cfg = _StubCfg(data=_StubData(jsut_yaml=str(_JSUT_FIXTURE)))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(Exception) as exc_info:
         evaluate_checkpoint(
             cfg,
             pilot="p_a",
             checkpoint=ckpt,
             dataset="jsut",
         )
+    assert not isinstance(exc_info.value, NotImplementedError), (
+        f"pilot='p_a' must be wired now, but got NotImplementedError: {exc_info.value}"
+    )
+
+
+def test_pilot_dispatch_p_a_supported(tmp_path: Path) -> None:
+    """Track 4: `_build_prediction_fn_from_checkpoint(pilot='p_a', ...)` returns
+    a callable — no NotImplementedError, no HF hub download when the model
+    dict pins a tiny-encoder config."""
+    torch = pytest.importorskip("torch")
+    from dataclasses import dataclass as _dc
+
+    from modernbert_g2p.evaluation.eval import _build_prediction_fn_from_checkpoint
+    from modernbert_g2p.models.p_a.config import PAConfig
+    from modernbert_g2p.models.p_a.model import build_p_a
+
+    pa_config = PAConfig.tiny()
+    model = build_p_a(pa_config)
+    ckpt = tmp_path / "pa_tiny.pt"
+    torch.save({"model": model.state_dict()}, ckpt)
+
+    @_dc(frozen=True)
+    class _CfgWithModel:
+        data: _StubData
+        model: dict
+
+    cfg = _CfgWithModel(
+        data=_StubData(jsut_yaml=str(_JSUT_FIXTURE)),
+        model={
+            "encoder_name": "tiny",
+            "decoder_layers": pa_config.decoder_layers,
+            "decoder_hidden": pa_config.decoder_hidden,
+            "decoder_heads": pa_config.decoder_heads,
+            "decoder_ffn": pa_config.decoder_ffn,
+            "decoder_dropout": pa_config.decoder_dropout,
+            "phoneme_vocab_size": pa_config.phoneme_vocab_size,
+        },
+    )
+    predict_fn = _build_prediction_fn_from_checkpoint(
+        cfg,
+        pilot="p_a",
+        checkpoint=ckpt,
+        batch_size=1,
+    )
+    assert callable(predict_fn), (
+        "_build_prediction_fn_from_checkpoint(pilot='p_a', ...) must return a "
+        "callable text -> hypothesis function."
+    )
 
 
 def _write_eval_json(

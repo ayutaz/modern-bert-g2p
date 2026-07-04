@@ -385,6 +385,65 @@ def test_build_p_c_tiny_without_encoder_raises() -> None:
         build_p_c(config)
 
 
+def test_pc_config_pad_class_weight_field() -> None:
+    """Track 4 / review-1 B1: PCConfig exposes a `pad_class_weight` field
+    that defaults to 1.0 (no-op). Values > 1.0 penalize the pad class more
+    strongly (encouraging pad predictions → fewer insertions); values < 1.0
+    penalize it less. Default 1.0 preserves backward-compat with the
+    ignore_index=pad path.
+    """
+    config = PCConfig()
+    assert hasattr(config, "pad_class_weight"), (
+        "PCConfig must expose a `pad_class_weight` float field so the p_c_30k "
+        "insertion-penalty ablation can be wired through YAML."
+    )
+    assert config.pad_class_weight == pytest.approx(1.0), (
+        "pad_class_weight must default to 1.0 (no-op) so existing training "
+        "runs keep their loss curves unchanged."
+    )
+
+
+def test_pc_forward_with_pad_weight() -> None:
+    """Track 4 / review-1 B1: PCCharBERT with `pad_class_weight=2.0`
+    forwards without crashing and produces a finite loss. This is a smoke
+    test — it does not assert on the loss magnitude relative to weight=1.0,
+    only that the field is honored end-to-end.
+    """
+    torch = pytest.importorskip("torch")
+
+    torch.manual_seed(0)
+    config = PCConfig(
+        encoder_name="tiny",
+        head_variant="C1",
+        encoder_hidden=32,
+        phoneme_vocab_size=16,
+        max_slot=4,
+        pad_class_weight=2.0,
+    )
+    encoder = _make_dummy_encoder(vocab_size=32, hidden=config.encoder_hidden)
+    model = build_p_c(config, encoder=encoder)
+
+    batch, seq_len = 2, 5
+    input_ids = torch.randint(0, 32, (batch, seq_len))
+    attention_mask = torch.ones(batch, seq_len, dtype=torch.long)
+    # Mix pad (-100) and non-pad phoneme labels so the weighted CE path
+    # exercises both the ignore_index and pad-class-weight branches.
+    phon_labels = torch.randint(
+        0, config.phoneme_vocab_size, (batch, seq_len, config.max_slot)
+    )
+    phon_labels[:, :, config.max_slot // 2 :] = -100  # pad half the slots
+
+    out = model(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        phoneme_labels=phon_labels,
+    )
+    loss = out["loss"]
+    assert torch.isfinite(loss), (
+        f"loss must be finite with pad_class_weight=2.0, got {loss.item()!r}"
+    )
+
+
 def test_import_p_c_does_not_require_torch(monkeypatch: pytest.MonkeyPatch) -> None:
     import importlib
     import sys

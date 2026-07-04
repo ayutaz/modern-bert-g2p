@@ -76,6 +76,50 @@ def test_p_c_yaml_hyperparameters_match_design_doc() -> None:
     assert cfg.training.total_steps == 40_000
 
 
+def test_load_p_a_30k_config() -> None:
+    """Track 4: `configs/p_a_30k.yaml` loads into a valid Phase2Config
+    with the 30K-step scale-up budget (chain_B in the deploy plan)."""
+    cfg = load_config(CONFIG_DIR / "p_a_30k.yaml")
+
+    assert isinstance(cfg, Phase2Config)
+    assert cfg.pilot == "P-A"
+    assert cfg.training.total_steps == 30_000, (
+        "p_a_30k.yaml is the scale-up config; total_steps must be 30000 to "
+        "match the chain_B deploy budget (~7h/seed on Vast H100)."
+    )
+    assert cfg.training.precision == "bf16"
+    # encoder_name may be either the HF hub id ("sbintuitions/modernbert-ja-130m")
+    # or a Vast-local prefetch path ("/root/models/modernbert_a") per review-1 B4;
+    # both are valid so long as a non-empty encoder_name is present.
+    assert isinstance(cfg.model.get("encoder_name"), str)
+    assert cfg.model["encoder_name"]
+
+
+def test_load_p_c_30k_config() -> None:
+    """Track 4 / review-1 B1: `configs/p_c_30k.yaml` loads into a valid
+    Phase2Config and carries the insertion-penalty `pad_class_weight`
+    knob in the model dict (used by _build_p_c_pipeline to configure
+    PCCharBERT._compute_loss).
+    """
+    cfg = load_config(CONFIG_DIR / "p_c_30k.yaml")
+
+    assert isinstance(cfg, Phase2Config)
+    assert cfg.pilot == "P-C"
+    assert cfg.training.total_steps == 30_000
+    assert "pad_class_weight" in cfg.model, (
+        "p_c_30k.yaml must expose model.pad_class_weight (the Track-2 "
+        "insertion-penalty ablation knob). Missing this field means the "
+        "chain_B P-C run would degrade into a scale-only baseline."
+    )
+    assert float(cfg.model["pad_class_weight"]) > 1.0, (
+        "pad_class_weight > 1.0 penalizes the pad class more strongly, "
+        "encouraging pad predictions and reducing insertions (review-1 B1). "
+        "A value <= 1.0 is directionally wrong for the insertion-penalty ablation."
+    )
+    assert cfg.model["head_variant"] == "C1"
+    assert cfg.model["phoneme_vocab_size"] == 68
+
+
 def test_unknown_pilot_raises_value_error(tmp_path: Path) -> None:
     payload = {
         "pilot": "P-X",

@@ -549,13 +549,93 @@ def _build_prediction_fn_from_checkpoint(
     batch_size: int,
 ) -> PredictionFn:
     """Load a saved checkpoint and return a text -> CanonicalForm callable."""
+    if pilot == "p_a":
+        return _build_pa_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
     if pilot == "p_c":
         return _build_pc_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
     raise NotImplementedError(
         f"evaluate_checkpoint: automatic model loading for pilot={pilot!r} "
-        f"from checkpoint={checkpoint} is not yet wired. Currently implemented: p_c. "
+        f"from checkpoint={checkpoint} is not yet wired. Currently implemented: p_a, p_c. "
         "Pass a `prediction_fn` keyword to bypass model construction."
     )
+
+
+def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> PredictionFn:
+    import warnings
+
+    import torch
+
+    from modernbert_g2p.models.canonical import Vocab, build_default_vocab, p_a_to_canonical
+    from modernbert_g2p.models.p_a.config import PAConfig
+    from modernbert_g2p.models.p_a.model import build_p_a
+    from modernbert_g2p.models.tokenization.p_a_tokenizer import PATokenizer
+
+    model_cfg = cfg.model if hasattr(cfg, "model") else {}
+    if not isinstance(model_cfg, dict):
+        model_cfg = {}
+    infer_cfg = getattr(cfg, "inference", None) or {}
+    if not isinstance(infer_cfg, dict):
+        infer_cfg = {}
+    defaults = PAConfig()
+    pa_config = PAConfig(
+        encoder_name=model_cfg.get("encoder_name", defaults.encoder_name),
+        decoder_layers=int(model_cfg.get("decoder_layers", defaults.decoder_layers)),
+        decoder_hidden=int(model_cfg.get("decoder_hidden", defaults.decoder_hidden)),
+        decoder_heads=int(model_cfg.get("decoder_heads", defaults.decoder_heads)),
+        decoder_ffn=int(model_cfg.get("decoder_ffn", defaults.decoder_ffn)),
+        decoder_dropout=float(model_cfg.get("decoder_dropout", defaults.decoder_dropout)),
+        phoneme_vocab_size=int(model_cfg.get("phoneme_vocab_size", defaults.phoneme_vocab_size)),
+        label_smoothing=float(model_cfg.get("label_smoothing", defaults.label_smoothing)),
+        pad_id=int(model_cfg.get("pad_id", defaults.pad_id)),
+        bos_id=int(model_cfg.get("bos_id", defaults.bos_id)),
+        eos_id=int(model_cfg.get("eos_id", defaults.eos_id)),
+        max_target_length=int(model_cfg.get("max_target_length", defaults.max_target_length)),
+        max_decode_len=int(infer_cfg.get("max_decode_len", defaults.max_decode_len)),
+        beam_size=int(infer_cfg.get("beam_size", 1)),
+        length_penalty=float(infer_cfg.get("length_penalty", defaults.length_penalty)),
+        coverage_penalty=float(infer_cfg.get("coverage_penalty", defaults.coverage_penalty)),
+    )
+
+    model = build_p_a(pa_config)
+    state = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    sd = state.get("model") if isinstance(state, dict) and "model" in state else state
+    load_result = model.load_state_dict(sd, strict=False)
+    unexpected = list(getattr(load_result, "unexpected_keys", []) or [])
+    if unexpected:
+        warnings.warn(
+            f"_build_pa_prediction_fn: {len(unexpected)} unexpected key(s) in checkpoint "
+            f"were ignored (first 5: {unexpected[:5]}). This may indicate a config mismatch "
+            "(e.g. differing phoneme_vocab_size or decoder_hidden between train and eval).",
+            stacklevel=2,
+        )
+    model.eval()
+
+    vocab: Vocab = build_default_vocab()
+    tokenizer = PATokenizer(
+        tokenizer_name=pa_config.encoder_name,
+        phoneme_vocab=vocab,
+        max_input_length=int(model_cfg.get("max_input_length", 512)),
+        max_target_length=pa_config.max_target_length,
+    )
+
+    def predict(text: str):
+        if not text:
+            return p_a_to_canonical([], vocab)
+        with torch.no_grad():
+            enc = tokenizer.encode_input(text)
+            input_ids = torch.tensor([enc["input_ids"]], dtype=torch.long)
+            attn = torch.tensor([enc["attention_mask"]], dtype=torch.long)
+            out_ids = model.generate(
+                input_ids=input_ids,
+                attention_mask=attn,
+                max_len=pa_config.max_decode_len,
+                beam=pa_config.beam_size,
+            )
+            token_ids = out_ids[0].tolist()
+        return p_a_to_canonical(token_ids, vocab)
+
+    del batch_size
+    return predict
 
 
 def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> PredictionFn:
