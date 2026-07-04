@@ -224,7 +224,7 @@ def test_smoke_shell_script_exists_and_executable() -> None:
     contents = SMOKE_SCRIPT.read_text(encoding="utf-8")
     assert "-m modernbert_g2p train" in contents
     assert "--smoke" in contents
-    for pilot in ("p_a", "p_b", "p_c"):
+    for pilot in ("p_a", "p_c"):
         assert pilot in contents
 
 
@@ -557,9 +557,8 @@ def test_main_compare_end_to_end_subprocess(tmp_path: Path) -> None:
         )
 
     ckpt_a = tmp_path / "p_a"
-    ckpt_b = tmp_path / "p_b"
     ckpt_c = tmp_path / "p_c"
-    for d in (ckpt_a, ckpt_b, ckpt_c):
+    for d in (ckpt_a, ckpt_c):
         d.mkdir()
     out_md = tmp_path / "table.md"
 
@@ -574,8 +573,6 @@ def test_main_compare_end_to_end_subprocess(tmp_path: Path) -> None:
             "compare",
             "--checkpoint",
             str(ckpt_a),
-            "--checkpoint",
-            str(ckpt_b),
             "--checkpoint",
             str(ckpt_c),
             "--output",

@@ -1,13 +1,12 @@
-"""Tests for the three pilot tokenizer wrappers.
+"""Tests for the two pilot tokenizer wrappers (P-A / P-C).
 
-Heavy runtime dependencies (``transformers``, ``fugashi``) are guarded with
+Heavy runtime dependencies (``transformers``) are guarded with
 ``pytest.importorskip`` inside each test that requires them. Tests that only
 exercise the pure-Python target-side encoding run without any ML stack.
 """
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 import pytest
@@ -16,13 +15,11 @@ from modernbert_g2p.models.canonical import (
     CanonicalForm,
     build_default_vocab,
     p_a_to_canonical,
-    p_b_to_canonical,
     p_c_to_canonical,
 )
 from modernbert_g2p.models.tokenization import (
     BaseTokenizer,
     PATokenizer,
-    PBTokenizer,
     PCTokenizer,
     get_tokenizer,
 )
@@ -94,31 +91,30 @@ def _make_canonical_watashi_wa() -> CanonicalForm:
 
 
 def test_all_tokenizers_import_lazily() -> None:
-    """Importing the tokenization package must not drag torch/fugashi at import time.
+    """Importing the tokenization package must not drag torch in at import time.
 
-    Guarded via subprocess so prior tests that lazy-imported fugashi do not pollute
-    sys.modules for this assertion.
+    Guarded via subprocess so prior tests do not pollute sys.modules for this
+    assertion.
     """
     import subprocess
     import sys as _sys
 
     code = (
         "import sys; from modernbert_g2p.models import tokenization; "
-        "sys.exit(0 if 'fugashi' not in sys.modules and 'torch' not in sys.modules else 1)"
+        "sys.exit(0 if 'torch' not in sys.modules else 1)"
     )
     result = subprocess.run([_sys.executable, "-c", code], capture_output=True, text=True)
-    assert result.returncode == 0, f"tokenization package eagerly imported fugashi/torch: {result.stdout} {result.stderr}"
-    for cls in (PATokenizer, PBTokenizer, PCTokenizer):
-        assert cls.name in {"p_a", "p_b", "p_c"}
+    assert result.returncode == 0, f"tokenization package eagerly imported torch: {result.stdout} {result.stderr}"
+    for cls in (PATokenizer, PCTokenizer):
+        assert cls.name in {"p_a", "p_c"}
 
 
 def test_all_tokenizers_satisfy_base_protocol() -> None:
-    """All 3 tokenizer instances structurally satisfy BaseTokenizer."""
+    """Both tokenizer instances structurally satisfy BaseTokenizer."""
     fake = _FakeHFTokenizer()
     pa = PATokenizer(hf_tokenizer=fake)
-    pb = PBTokenizer(hf_tokenizer=fake, pretokenizer=_MockPretokenizer([]))
     pc = PCTokenizer(hf_tokenizer=fake)
-    for tk in (pa, pb, pc):
+    for tk in (pa, pc):
         assert isinstance(tk, BaseTokenizer)
         assert hasattr(tk, "encode_input")
         assert hasattr(tk, "encode")
@@ -292,178 +288,6 @@ class TestPATokenizer:
         assert out == {"input_ids": [], "attention_mask": []}
 
 
-class _MockPretokenizer:
-    """Mock pretokenizer that returns a fixed list of MeCabToken records."""
-
-    def __init__(self, tokens: list[Any]) -> None:
-        self._tokens = tokens
-
-    def pretokenize(self, text: str) -> list[Any]:
-        return list(self._tokens)
-
-
-class TestPBTokenizer:
-    def _tokens(self) -> list[Any]:
-        from modernbert_g2p.models.p_b.mecab import MeCabToken
-
-        return [
-            MeCabToken(surface="私", start=0, end=1, pos="名詞"),
-            MeCabToken(surface="は", start=1, end=2, pos="助詞"),
-            MeCabToken(surface="東京", start=2, end=4, pos="名詞"),
-        ]
-
-    def test_instantiates_with_defaults(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        assert tk.name == "p_b"
-        assert tk.morph_token == "[MORPH]"
-        assert tk.max_mora_per_morph == 8
-        assert tk.max_input_length == 512
-
-    def test_morph_id_is_added_and_distinct_from_unk(self) -> None:
-        fake = _FakeHFTokenizer()
-        tk = PBTokenizer(hf_tokenizer=fake, pretokenizer=_MockPretokenizer([]))
-        mid = tk.morph_id
-        assert mid != fake.unk_token_id
-        assert "[MORPH]" in fake.get_vocab()
-
-    def test_encode_input_inserts_morph_between_morphs(self) -> None:
-        pytest.importorskip("modernbert_g2p.models.p_b.mecab")
-        tokens = self._tokens()
-        pre = _MockPretokenizer(tokens)
-        fake = _FakeHFTokenizer()
-        tk = PBTokenizer(hf_tokenizer=fake, pretokenizer=pre)
-        out = tk.encode_input("私は東京")
-        morph_id = tk.morph_id
-        assert out["input_ids"].count(morph_id) == len(tokens) - 1
-        assert len(out["morph_positions"]) == len(tokens)
-        assert len(out["morph_lens"]) == len(tokens)
-
-    def test_encode_input_morph_positions_point_to_starts(self) -> None:
-        pytest.importorskip("modernbert_g2p.models.p_b.mecab")
-        tokens = self._tokens()
-        pre = _MockPretokenizer(tokens)
-        fake = _FakeHFTokenizer()
-        tk = PBTokenizer(hf_tokenizer=fake, pretokenizer=pre)
-        out = tk.encode_input("私は東京")
-        ids = out["input_ids"]
-        assert ids[0] == fake.cls_token_id
-        assert ids[-1] == fake.sep_token_id
-        for pos in out["morph_positions"]:
-            assert 0 < pos < len(ids)
-            assert ids[pos] != tk.morph_id
-            assert ids[pos] != fake.cls_token_id
-            assert ids[pos] != fake.sep_token_id
-
-    def test_encode_input_attention_mask_length_matches(self) -> None:
-        pytest.importorskip("modernbert_g2p.models.p_b.mecab")
-        tokens = self._tokens()
-        pre = _MockPretokenizer(tokens)
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=pre)
-        out = tk.encode_input("私は東京")
-        assert len(out["input_ids"]) == len(out["attention_mask"])
-
-    def test_encode_target_shapes(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        cf = _make_canonical_watashi_wa()
-        morph_alignment = [0, 0, 0, 1]
-        out = tk.encode_target(cf, morph_alignment)
-        assert len(out["per_morph_phon_ids"]) == 2
-        assert len(out["per_morph_hl_ids"]) == 2
-        assert len(out["apbp_bio_ids"]) == 2
-        for row in out["per_morph_phon_ids"]:
-            assert len(row) == tk.max_mora_per_morph
-        for row in out["per_morph_hl_ids"]:
-            assert len(row) == tk.max_mora_per_morph
-
-    def test_encode_target_uses_vocab_ids(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        vocab = tk.vocab
-        cf = CanonicalForm(phonemes=("w", "a"), mora_accents=("H",), accent_boundaries=())
-        out = tk.encode_target(cf, [0])
-        assert out["per_morph_phon_ids"][0][0] == vocab.id_of("w")
-        assert out["per_morph_phon_ids"][0][1] == vocab.id_of("a")
-        assert out["per_morph_hl_ids"][0][0] == vocab.high_id
-        assert out["per_morph_phon_ids"][0][2] == vocab.pad_id
-
-    def test_encode_target_apbp_first_morph_is_outside(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        cf = CanonicalForm(phonemes=("w", "a"), mora_accents=("H",), accent_boundaries=())
-        out = tk.encode_target(cf, [0])
-        assert out["apbp_bio_ids"][0] == BIO_LABEL_TO_ID["O"]
-
-    def test_encode_target_apbp_boundary_tag_is_begin(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        cf = _make_canonical_watashi_wa()
-        out = tk.encode_target(cf, [0, 0, 0, 1])
-        assert out["apbp_bio_ids"][0] == BIO_LABEL_TO_ID["O"]
-        assert out["apbp_bio_ids"][1] == BIO_LABEL_TO_ID["B"]
-
-    def test_encode_target_alignment_length_mismatch_raises(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        cf = _make_canonical_watashi_wa()
-        with pytest.raises(ValueError, match="morph_alignment"):
-            tk.encode_target(cf, [0, 0, 0])
-
-    def test_encode_target_roundtrip_via_p_b_to_canonical(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        vocab = tk.vocab
-        cf = _make_canonical_watashi_wa()
-        out = tk.encode_target(cf, [0, 0, 0, 1])
-        id_to_hl = {vocab.pad_id: "", vocab.high_id: "H", vocab.low_id: "L"}
-        per_morph_hl_strs = [
-            [id_to_hl.get(x, "") for x in row] for row in out["per_morph_hl_ids"]
-        ]
-        apbp_tags = [ID_TO_BIO_LABEL[x] for x in out["apbp_bio_ids"]]
-        recovered = p_b_to_canonical(
-            out["per_morph_phon_ids"], per_morph_hl_strs, apbp_tags, vocab
-        )
-        assert recovered == cf
-
-    def test_fugashi_required_when_pretokenizer_missing(self) -> None:
-        if "fugashi" in sys.modules:
-            pytest.skip("fugashi is installed; cannot exercise ImportError path")
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer())
-        with pytest.raises(RuntimeError, match="fugashi"):
-            tk.encode_input("テスト")
-
-    def test_encode_batched_nests_extras(self) -> None:
-        tokens = self._tokens()
-        pre = _MockPretokenizer(tokens)
-        fake = _FakeHFTokenizer()
-        tk = PBTokenizer(hf_tokenizer=fake, pretokenizer=pre)
-        texts = ["私は東京", "私は東京"]
-        out = tk.encode(texts)
-        assert set(out.keys()) == {"input_ids", "attention_mask", "extras"}
-        assert set(out["extras"].keys()) == {"morph_positions", "morph_lens"}
-        assert "morph_positions" not in out
-        assert "morph_lens" not in out
-        assert len(out["input_ids"]) == 2
-        assert len(out["extras"]["morph_positions"]) == 2
-        assert len(out["extras"]["morph_lens"]) == 2
-        for row_positions in out["extras"]["morph_positions"]:
-            assert len(row_positions) == len(tokens)
-
-    def test_encode_batched_matches_encode_input(self) -> None:
-        tokens = self._tokens()
-        pre = _MockPretokenizer(tokens)
-        fake = _FakeHFTokenizer()
-        tk = PBTokenizer(hf_tokenizer=fake, pretokenizer=pre)
-        text = "私は東京"
-        per = tk.encode_input(text)
-        out = tk.encode([text])
-        assert out["input_ids"][0] == per["input_ids"]
-        assert out["attention_mask"][0] == per["attention_mask"]
-        assert out["extras"]["morph_positions"][0] == per["morph_positions"]
-        assert out["extras"]["morph_lens"][0] == per["morph_lens"]
-
-    def test_encode_batched_empty_list(self) -> None:
-        tk = PBTokenizer(hf_tokenizer=_FakeHFTokenizer(), pretokenizer=_MockPretokenizer([]))
-        out = tk.encode([])
-        assert out["input_ids"] == []
-        assert out["attention_mask"] == []
-        assert out["extras"] == {"morph_positions": [], "morph_lens": []}
-
-
 class TestPCTokenizer:
     def test_instantiates_with_defaults(self) -> None:
         tk = PCTokenizer(hf_tokenizer=_FakeHFTokenizer())
@@ -611,15 +435,6 @@ class TestGetTokenizerFactory:
         assert isinstance(tk, PATokenizer)
         assert tk.name == "p_a"
 
-    def test_returns_pb(self) -> None:
-        tk = get_tokenizer(
-            "p_b",
-            hf_tokenizer=_FakeHFTokenizer(),
-            pretokenizer=_MockPretokenizer([]),
-        )
-        assert isinstance(tk, PBTokenizer)
-        assert tk.name == "p_b"
-
     def test_returns_pc(self) -> None:
         tk = get_tokenizer("p_c", hf_tokenizer=_FakeHFTokenizer())
         assert isinstance(tk, PCTokenizer)
@@ -629,6 +444,10 @@ class TestGetTokenizerFactory:
         for alias in ("PA", "pa", "p-a", "P_A"):
             tk = get_tokenizer(alias, hf_tokenizer=_FakeHFTokenizer())
             assert isinstance(tk, PATokenizer)
+
+    def test_raises_on_removed_pb(self) -> None:
+        with pytest.raises(ValueError, match="unknown pilot"):
+            get_tokenizer("p_b")
 
     def test_raises_on_unknown_pilot(self) -> None:
         with pytest.raises(ValueError, match="unknown pilot"):

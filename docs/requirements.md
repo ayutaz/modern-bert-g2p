@@ -1,9 +1,33 @@
 # 要求定義書 — ModernBERT日本語G2P
 
-**バージョン:** 1.4
-**作成日:** 2026-07-03 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映 / v1.3 haqumei深掘り反映 / v1.4 プロソディ出力形式拡張)
-**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査 (計算コスト実測 / Ablation先行研究)、Phase 0 blocker 5件の並列調査結果 (JVS-3000入手 / Share-Alike法務 / License選定 / Hard-setキュレーション / Vast.ai GPU実相場)、**haqumei徹底解剖 (v0.8.0 コード全体)** に基づく「rule天井」判定、および **haqumei ProsodyFormat 3種類 (Default/Prefix/Numeric) + g2p_mapping_prosody API の実測動作確認**
+**バージョン:** 2.0 (**Pure-NN Research Pivot**)
+**作成日:** 2026-07-04 (v1.0 初版 / v1.1 補強 / v1.2 blocker調査反映 / v1.3 haqumei深掘り反映 / v1.4 プロソディ出力形式拡張 / **v2.0 Pure-NN pivot**)
+**根拠:** `docs/research/01_overview.md` 〜 `08_market_landscape.md` の調査結果、追加調査、Phase 0 blocker 並列調査、haqumei徹底解剖、haqumei ProsodyFormat 実測、**v2.0 で pure-NN pivot 設計 spec (2026-07-04) と Review-1 adversarial critique の 4 blocker (B1〜B4) を反映**
 **ステータス:** **Phase 0 開始可** (v1.2 で全 blocker 解決)
+
+---
+
+## ⚠️ v2.0 Pure-NN Pivot 宣言 (2026-07-04)
+
+**背景**: ユーザー方針転換 —「ルールベースの g2p の処理が入るのであればそれでいいのでこのプロジェクトをする必要がないです」。**hybrid 経路は結果の 80-95% が辞書由来** (haqumei 徹底解剖より) のため、130M ModernBERT を書く動機自体が消える。
+
+**新 positioning**:
+- **Character**: 研究プロジェクト (production drop-in ではない)
+- **Target**: pure-NN Japanese G2P の空白領域を JSUT/JVS/ROHAN 標準ベンチで埋める初のデータポイント
+- **勝つべき相手 (must-beat, pure-text NN のみ)**: CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP
+- **参考値 (target ではない)**: haqumei 1.17% / OpenJTalk 1.03% / Frontier LLM 0.52-0.62% / Ohnaka 2025 speech+text 0.93%
+
+**v2.0 の破壊的変更**:
+- **削除 (deprecated)**: FR-20〜23 (hybrid 推論), FR-35 (pyopenjtalk 互換テスト), FR-50〜53 (haqumei 越え攻撃戦略の hybrid 系), CR-26 (pyopenjtalk-plus 辞書 primary), CR-43 (pure-NN 禁則)
+- **降格 (MUST → SHOULD)**: NFR-05, NFR-06, NFR-17, CR-27, CR-28
+- **新規**: FR-60〜62 (pure-NN 制約), NFR-08〜09 (pure-NN 先行研究 baseline), CR-90〜92 (pure-NN inference boundary + データ教師信号の rule-leakage 開示)
+- **反転**: CR-43 (単一 pure-NN 禁則 → pure-NN MUST)
+
+**Review-1 adversarial critique の 4 blocker (B1〜B4) への対応**:
+- **B1 (protocol 不整合)**: FR-61 で先行研究 4 モデルを我々の環境で同一 metric に換算・再測定することを MUST 化
+- **B2 (CC-G2PnP 数値誤り)**: 「6D-Eval SER 8.4%」は誤り。正しくは Table 1 PnP CER 1.79-1.80%, Phoneme CER 0.48-0.52%, Dict-DNN-NS が 1.71/0.40 で勝利。09 ドキュメントで訂正
+- **B3 (Frontier LLM 数値の一次確認)**: 0.52/0.62% は Koriyama Interspeech 2026 (arxiv 2606.22009) を直接引用して確定
+- **B4 (pyopenjtalk-plus 教師信号 = rule leakage 相当)**: CR-91 で「辞書由来 pretrain 教師 = rule-based signal の学習パイプへの持ち込み」を明示自己申告 (推論 pure-NN との境界を分離)
 
 ---
 
@@ -25,18 +49,26 @@
 
 ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
-### 1.2 目的
+### 1.2 目的 (**v2.0 pure-NN pivot**)
 
-日本語 Grapheme-to-Phoneme (G2P) を、既存OSSと同等以上の精度で提供する、fine-tuned ModernBERTベースの公開モデルを開発する。
+**ModernBERT (encoder-only pure-NN) の Japanese G2P 応用可能性を検証する研究プロジェクト**。出力パスに rule / dict lookup を含めない (pure-NN, no dict inference)。Primary target は公開されている pure-NN Japanese G2P モデル群を JSUT/JVS/ROHAN 標準ベンチで系統的に上回ること。
+
+**3ティアの competitive landscape**:
+1. **Primary (must-beat, pure-text NN のみ)**: CharsiuG2P (own-dict-holdout Japanese PER 10.51% / monolingual 66.89%) / PnG BERT (pretraining validation whole-word G2P accuracy 45.5%, JSUT test PER 未公表) / Kakegawa TJ-G2P (Kurihara 2024 の re-implementation で JSUT400 PPL CER 11.85%) / CC-G2PnP (6D-Eval PnP CER 1.79-1.80%, ただし 6D-Eval は SB Intuitions 私有 2,722 文セット、Dict-DNN-NS が 1.71/0.40 で勝利)
+2. **Reference (compare but not target)**: OpenJTalk 1.03% / haqumei 1.17% — hybrid 天井なので pure-NN 側の 130M では絶対値では劣る前提。gap を可視化する
+3. **Aspirational (world-first if achieved)**: Frontier LLM (Koriyama Interspeech 2026, arxiv 2606.22009) の Claude Opus 4.6 JVS-3000 kana CER 0.52% / Gemini 3.1 Pro 0.62% を 130M pure-NN で近似できるか
+
+**Informed reference (speech-conditioned, competition scope 外)**: Ohnaka et al. INTERSPEECH 2025 (arxiv 2506.04527) の speech+text encoder + line-distilbert-base-japanese が LARGE-TTSaug PER 0.93% — pure-text NN が到達しうる上限の informed reference。本プロジェクトは pure-text のみで戦うため直接競合ではないが、NN が hybrid 並の精度に到達しうるという存在証明として引用可能。
 
 ### 1.3 スコープ
 
 **含む** (In-scope):
-- 日本語テキスト → 音素列 + モーラアクセント + アクセント句境界 の変換モデル
+- 日本語テキスト → 音素列 + モーラアクセント + アクセント句境界 の変換モデル (**pure-NN, no dict inference**)
 - 学習・評価パイプラインと再現可能なスクリプト
 - 3本柱ベンチマーク (JSUT Basic5000 / JVS-3000 / ROHAN 4600) の公開結果
+- pure-NN 先行研究 4 モデル (CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP) を同一プロトコルで再測定した比較 table
 - Hugging Face Hub / GitHub での公開
-- pyopenjtalk互換API (Style-Bert-VITS2等へのドロップイン置換)
+- ~~pyopenjtalk互換API (Style-Bert-VITS2等へのドロップイン置換)~~ **(deprecated 2026-07-04 v2.0 pivot)** — 研究プロジェクトなので production API compat は out-of-scope
 
 **含まない** (Out-of-scope):
 - TTS音響モデル (voice cloning, prosody generation)
@@ -64,10 +96,11 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 
 | ステークホルダー | 期待 |
 |---|---|
-| OSS TTS開発者 (Style-Bert-VITS2 / GPT-SoVITS等) | pyopenjtalk のドロップイン置換で TTS品質向上 |
-| 音声合成研究者 | 標準ベンチマークでの再現可能なNN G2P baseline |
-| 商用TTSサービス提供者 | 商用配布可能なライセンスで採用可能なOSS G2P |
-| 日本語音声NLPコミュニティ | 空白領域を埋める最初のデータポイント |
+| 音声合成研究者 | pure-NN 日本語 G2P の JSUT/JVS/ROHAN 標準ベンチ上の scaling law データポイント |
+| 音声/NLP アカデミア | pure-NN G2P 先行研究 (PnG BERT / CharsiuG2P / Kakegawa / CC-G2PnP) との横断比較 table |
+| 日本語音声NLPコミュニティ | ModernBERT × G2P の応用可能性検証結果 (positive/negative result 両方) |
+| ~~OSS TTS開発者~~ **(deprecated v2.0)** | ~~pyopenjtalk のドロップイン置換~~ — 本プロジェクトは pure-NN 研究であり production TTS drop-in ではない |
+| ~~商用TTSサービス提供者~~ **(deprecated v2.0)** | 同上 — Apache-2.0 のオープン重みは配布するが production API 互換保証はしない |
 
 ---
 
@@ -118,7 +151,7 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
   - **Strategy A**: 英→カタカナ音写 → 日本語音素化 (Kanalizer流。VOICEVOX/kanalizer-model のパスに準拠)
   - **Strategy B**: 英発音記号 (CMUdict / IPA) を経由し、日本語音素にマッピング
   - **Phase 2** で Strategy A / B の両方をパイロット評価し、精度・レイテンシ・カバレッジで最良を確定する
-- **FR-07** [MUST]: 英字略語 (AI, NASA等) を **アルファベット読み** (例: AI → エーアイ) と **単語読み** (例: NASA → ナサ) で区別する。判定は文脈+辞書+モデル出力の3層で決定する
+- **FR-07** [MUST] (**v2.0 pure-NN 修正**): 英字略語 (AI, NASA等) を **アルファベット読み** (例: AI → エーアイ) と **単語読み** (例: NASA → ナサ) で区別する。**判定は NN token classification のみで行う (推論時の外部辞書 lookup を含めない)**。ただし学習信号としての辞書由来 (surface, reading) ペアの利用は許容 (CR-91 の rule-leakage 開示範囲内)
 - **FR-08** [MUST]: 英数字・単位表現 (10km, 3GB, 2025年, 10:30, 3.14) の正規化・読み上げロジックを実装する
 - **FR-09** [MUST]: 記号連結語 (Wi-Fi, e-mail, T-shirt) を1トークンとして扱い、既存辞書または外来語NNで音素化する
 - **FR-0A** [SHOULD]: 未知の混在パターン (SNS発の造語、絵文字混在) に対するフォールバック戦略を実装する
@@ -133,15 +166,14 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **FR-13** [MUST]: アクセント核位置予測 head (ANPP: Accent Nucleus Position Prediction)
 - **FR-14** [MUST]: アクセント sandhi 補正 head (BAS: Accent Sandhi correction、NHK BAS相当)
 
-### 2.3 ハイブリッド推論パイプライン
+### 2.3 ~~ハイブリッド推論パイプライン~~ **(全項目 deprecated 2026-07-04 v2.0 pure-NN pivot)**
 
-- **FR-20** [MUST]: pyopenjtalk (辞書lookup) を primary path として使用する
-- **FR-21** [MUST]: 辞書lookup の uncertainty region (多音字位置 / 複合語 / 助数詞連結 / OOVカタカナ / 固有名詞) を検出する
-- **FR-22** [MUST]: uncertainty region に対してのみ ModernBERT を発火する条件付き推論を実装する
-- **FR-23** [SHOULD]: 辞書結果とNN結果を統合する reconciliation strategy を複数比較可能にする
-  - Strategy A: 辞書ヒットは常に辞書優先
-  - Strategy B: uncertainty threshold で切り替え
-  - Strategy C: NN confidence が高ければ辞書を上書き
+**v2.0 で全面削除**。理由: pure-NN pivot により推論パスに rule/dict lookup を含めない (FR-60 で新規MUST化)。詳細な削除項目:
+
+- ~~**FR-20**~~ (**deprecated v2.0**): ~~pyopenjtalk (辞書lookup) を primary path として使用する~~
+- ~~**FR-21**~~ (**deprecated v2.0**): ~~辞書lookup の uncertainty region 検出~~
+- ~~**FR-22**~~ (**deprecated v2.0**): ~~uncertainty region に対する条件付き NN 推論~~
+- ~~**FR-23**~~ (**deprecated v2.0**): ~~reconciliation strategy 比較~~
 
 ### 2.4 API
 
@@ -149,24 +181,18 @@ ModernBERT日本語G2P (仮称 — 公開時にブランド名確定)
 - **FR-31** [MUST]: `g2p(text, kana=True)` でカタカナ出力オプションをサポートする
 - **FR-32** [MUST]: `g2p(text, return_accent=True)` でアクセント情報付き出力を提供する
 - **FR-33** [SHOULD]: バッチ推論API (`g2p_batch(texts: List[str])`) を提供する
-- **FR-34** [MAY]: Rust bindings (haqumei互換) を提供する
-- **FR-35** [MUST] (**v1.1 追加**): pyopenjtalk 互換テストスイート (最小 1,000文) を CI で実行し、辞書ヒット入力の出力一致率 **≥ 99.0%** を維持する (ドロップイン置換の実質保証)
+- **FR-34** [MAY] (**v2.0 reframe**): Rust bindings を提供する。~~haqumei 互換 API~~ という production drop-in 目的は削除し、pure-NN 推論の高速化バインディングとして位置づける
+- ~~**FR-35**~~ (**deprecated 2026-07-04 v2.0 pivot**): ~~pyopenjtalk 互換テストスイートで辞書ヒット入力の一致率 ≥ 99.0%~~ — pure-NN が dict と一致することは目標ではない。研究プロジェクトなので production drop-in 保証は out-of-scope
 
-### 2.5a haqumei 越えのための攻撃戦略 (**v1.3 追加、primary benchmark 分析**)
+### 2.5a ~~haqumei 越えのための攻撃戦略~~ **(FR-50〜53 deprecated 2026-07-04 v2.0 pivot、FR-54 のみ保持)**
 
-haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_existing_systems.md §A.3`):
+**v2.0 の理由**: v1.3 の攻撃戦略は「同じ pyopenjtalk-plus 辞書を採用しつつ NN 補正を上乗せする hybrid 差別化」を前提としていた。pure-NN pivot により hybrid 差別化戦略自体が消えるため、以下 4 項目は deprecated。ただし FR-54 (mora accent 公表) のみ pure-NN でも独立に有効なので保持し、FR-40 系に統合する。
 
-- **haqumei の PER 1.17% は事実上「pyopenjtalk-plus 辞書 + `use_unidic_yomi` + `normalize_iu` 後処理」の性能** (辞書由来 80-90%, 後処理 10-15%, NN 由来 0-5%)
-- **haqumei で NN が発火するのは英単語遭遇時のみ** (Kanalizer ONNX 9MB, 2層 LSTM+attention seq2seq)
-- **haqumei は "rule 天井"** であり "NN 天井" ではない — 本プロジェクトが ModernBERT で狙う領域と重複しない
-
-以下の攻撃ポイントを明示的に要件化する:
-
-- **FR-50** [MUST]: **アクセント連続変異 (BAS/accent sandhi) 補正**を実装する — haqumei は Open JTalk 規則そのままで NN補正なし
-- **FR-51** [MUST]: **多音字曖昧性解消 NN** を実装する — haqumei は辞書優先度依存 (「行った (いった/おこなった)」等)
-- **FR-52** [MUST]: **英字略語判定 NN** (AI→エーアイ vs NASA→ナサ) を実装する — haqumei の Kanalizer は音写のみで判定不可
-- **FR-53** [MUST]: **未知語処理**を改善する — haqumei は Open JTalk 準拠で未知語を `pau` (無音) 落としする、これを固有名詞/新語で顕在化する failure と位置付け解消
-- **FR-54** [SHOULD]: **mora accent accuracy を公開評価指標として公表する** — haqumei は未公表領域、公表することで自動的に情報優位
+- ~~**FR-50**~~ (**deprecated v2.0**): ~~アクセント連続変異 (BAS/accent sandhi) 補正 → haqumei に対する hybrid 差別化~~ → **保持だがフレーム変更**: BAS は multi-task の 1 head として encoder に統合 (FR-14 で既に MUST 化済)。「haqumei 越え」の framing のみ削除
+- ~~**FR-51**~~ (**deprecated v2.0**): ~~多音字曖昧性解消 NN → haqumei の辞書優先度依存への差別化~~ → **保持だがフレーム変更**: 多音字 head は FR-11 で既に MUST 化済。「haqumei 越え」の framing のみ削除
+- ~~**FR-52**~~ (**deprecated v2.0**): ~~英字略語判定 NN → haqumei Kanalizer への差別化~~ → **保持だがフレーム変更**: 略語判定は FR-07 で pure-NN として再定義済み
+- ~~**FR-53**~~ (**deprecated v2.0**): ~~未知語処理 → haqumei の pau 落としへの差別化~~ → **保持だがフレーム変更**: 未知語処理は FR-01 の in-scope 入力扱いに統合済
+- **FR-54** [MUST] (**v2.0 で SHOULD → MUST 昇格 + 意味変更**): **mora accent accuracy を独自公表指標として公表する**。pure-NN の JSUT モーラアクセント accuracy を公開ベンチとして提示することで、pure-NN 系列で情報優位を獲得する。haqumei 未公表領域という framing は削除、pure-NN 先行研究 (PnG BERT / CharsiuG2P / CC-G2PnP) が未公表であることを新規優位性根拠にする
 
 ### 2.5 モデル配布
 
@@ -178,26 +204,36 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
   - MAJOR = 音素表記 / API シグネチャ 互換破壊時
   - MINOR = 新機能・新オプション追加時 (後方互換)
   - PATCH = 精度改善・バグ修正 (完全後方互換)
-  - Phase 3完了時 = `v0.1.0-alpha.1`, Phase 4完了時 = `v0.2.0-beta.1`, Phase 6公開時 = `v1.0.0`
+  - Phase 3完了時 = `v0.1.0-alpha.1`, **Phase 4' (Pretrain-plus-fine-tune + Scale/Ablation) 完了時** = `v0.2.0-beta.1`, Phase 6公開時 = `v1.0.0`
 - **FR-45** [SHOULD] (**v1.1 追加**): CHANGELOG.md を SemVer リリースごとに更新し、精度差分と互換破壊を明記する
+
+### 2.6 Pure-NN 制約 (**v2.0 新規追加**)
+
+- **FR-60** [MUST] (**v2.0 新規**): **推論時に外部辞書 lookup を発生させない (pure-NN 制約)**。推論パスで pyopenjtalk / MeCab / UniDic / JMDict / pyopenjtalk-plus 辞書等を呼ばない。char-level pre-tokenize や morpheme 情報を **学習信号** として使うことは許容 (CR-91 の rule-leakage 開示範囲内で明示自己申告)。ただし推論時の tokenizer 内部処理 (SentencePiece / char-level BERT の pre-tokenize) は "内部トークナイザー" として許容し、これは辞書 lookup とは区別する
+- **FR-61** [MUST] (**v2.0 新規、Review-1 B1 対応**): **pure-NN 先行研究 4 モデルを JSUT/JVS/ROHAN 3 本柱の同一 split・同一 metric で再測定する**。既存文献の指標不整合 (CharsiuG2P own-dict-holdout PER vs Kurihara JSUT400 PPL CER vs PnG BERT pretraining validation whole-word acc vs CC-G2PnP 6D-Eval PnP CER) を全部 PER/kana CER/KER に換算し公表する。**引用時は元の metric 名を保持し、換算後の値と併記する** (protocol harmonization は `docs/research/09` の §4 で規定)
+- **FR-62** [SHOULD] (**v2.0 新規**): **マルチタスク supervision** (polyphone / APBP / ANPP / BAS) を学習に使うが、推論時にはこれら head の出力を **hybrid で辞書と統合しない**。head の出力は全て NN の順伝播結果として提示する
 
 ---
 
 ## 3. 非機能要件 (Non-Functional Requirements)
 
-### 3.1 精度目標 (**必達 vs Stretch**)
+### 3.1 精度目標 (**v2.0 pure-NN 3 段構成に再設計**)
 
-3ティアの敵を明示的に上回ることを目標とする ([01overview §2])
+**v2.0 pivot** により pure-NN 世界内の tier を Conservative / Stretch / Aspirational の 3 段構成に。**haqumei / OpenJTalk / Frontier LLM は reference-only** (target ではない)。**pure-NN 先行研究の baseline は Review-1 B1 の通り protocol 不整合のため、FR-61 の再測定完了までは "参照値" として扱う**。
 
-| 指標 | ベースライン | **必達目標 (MUST)** | Stretch (SHOULD) | 参照 |
-|---|---|---|---|---|
-| **NFR-01**: JVS-3000 kana CER | OpenJTalk 1.03% | < 1.03% | < 0.62% (Gemini 3.1 Pro) / < 0.52% (Claude Opus 4.6) | [03 §1.1] |
-| **NFR-02**: JSUT Basic5000 PER | haqumei 1.17% | < 1.17% | < 0.5% | [03 §1.2] |
-| **NFR-03**: ROHAN 4600 KER | haqumei 1.64% | < 1.64% | < 1.0% | [03 §1.3] |
-| **NFR-04**: JSUT モーラアクセント精度 | Hida 97.33% | > 97.33% | > 98% | [04 §A.3] |
-| **NFR-05** (v1.3): **haqumei と同一プロトコルの JSUT PER** | haqumei 1.17% | < 1.17% (差 ≥ 0.15pt) | < 0.5% | haqumei-eval + [02 §A.3] |
-| **NFR-06** (v1.3): **haqumei と同一プロトコルの ROHAN KER** | haqumei 1.64% | < 1.64% (差 ≥ 0.15pt) | < 1.0% | haqumei-eval + [02 §A.3] |
-| **NFR-07** (v1.3): **本プロジェクト独自公表指標 — JSUT モーラアクセント精度公表** (haqumei 非公表領域) | (haqumei は非公表) | 必ず公表する | > 98% | 情報優位獲得 |
+| 指標 | Pure-NN Baseline (protocol 不整合、FR-61 で再測定要) | Conservative (MUST) | Stretch (SHOULD) | Aspirational (MAY) | 参照 |
+|---|---|---|---|---|---|
+| **NFR-01** (v2.0 pure-NN 化): JVS-3000 kana CER | (pure-NN 公開値なし、Phase 2 で自己測定) | < 5.0% | < 2.0% | < 0.62% (Gemini 3.1 Pro 越え) | [03 §1.1] + [09] |
+| **NFR-02** (v2.0 pure-NN 化): JSUT Basic5000 PER | CharsiuG2P own-dict-holdout ~10.51% (**IPA-vs-dict word-list PER, ≠ JSUT sentence PER**, Review-1 B1) | < 5.0% | < 2.0% | < 0.5% (Frontier LLM 並み) | [03 §1.2] + [09] |
+| **NFR-03** (v2.0 pure-NN 化): ROHAN 4600 KER | (pure-NN 公開値なし、Phase 2 で自己測定) | < 5.0% | < 2.0% | < 1.0% | [03 §1.3] + [09] |
+| **NFR-04**: JSUT モーラアクセント精度 | (Hida 97.33% は hybrid なので reference のみ、pure-NN 公開値なし) | > 90% | > 96.66% (Hida hybrid 越え) | > 98% | [04 §A.3] |
+| ~~**NFR-05**~~ (**deprecated 2026-07-04 v2.0**): ~~haqumei と同一プロトコルの JSUT PER~~ → **reference-only 降格**: haqumei 1.17% は参考値として測定するが acceptance criteria には含めない | haqumei 1.17% | (参考のみ) | — | — | reference |
+| ~~**NFR-06**~~ (**deprecated 2026-07-04 v2.0**): ~~haqumei と同一プロトコルの ROHAN KER~~ → **reference-only 降格**: 同上 | haqumei 1.64% | (参考のみ) | — | — | reference |
+| **NFR-07** (**v1.3 → v2.0 で意味変更**): 本プロジェクト独自公表指標 — JSUT モーラアクセント精度公表 | (pure-NN 先行研究 全 4 モデルが未公表) | 必ず公表する | > 96.66% | > 98% | 情報優位獲得 |
+| **NFR-08** (**v2.0 新規**): **Pure-NN 先行 4 モデル (CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP) 越え** — FR-61 の再測定結果に基づき、JSUT/JVS/ROHAN 3 本柱の 全 metric で明確に上回る | 4 モデルの max value | 全 metric で下回る (MUST) | 4 モデルの best を 2 倍上回る | 4 モデル全て 5 倍以上上回る | [09] |
+| **NFR-09** (**v2.0 新規、Review-1 S1 対応**): **Speech-conditioned NN との gap 可視化** (Ohnaka 2025 arxiv 2506.04527 PER 0.93% と Furigana Whisper JSUT closed-set CER 0.19%/6.43% を informed reference として測定) | Ohnaka 0.93% (speech+text) | (target ではない、gap を報告のみ) | — | — | [09] |
+
+**Reference values (target ではない、v2.0 で明示注記)**: haqumei 1.17% / OpenJTalk 1.03% / Claude Opus 4.6 0.52% (Koriyama Interspeech 2026, arxiv 2606.22009) / Gemini 3.1 Pro 0.62% は表の脚注に "hybrid / rule / LLM 参照値" として明示。Frontier LLM は **parse mode = 暗黙 hybrid** の可能性があるため 130M pure-NN 越えは非現実的想定。
 
 ### 3.2 Hard-set 精度 (per-category)
 
@@ -210,17 +246,14 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 - **NFR-14** [MUST]: 数詞 / 日付 / 時刻 / 単位 hard-set の PER が pyopenjtalk baseline を上回る
 - **NFR-15** [MUST]: **英単語混在文 hard-set (英単語+日本語混在文 200文) の PER が pyopenjtalk baseline を上回る** — 「iPhone を買った」「PDF を開く」等
 - **NFR-16** [MUST]: **英字略語 hard-set (AI/NASA/HTML/e-mail等の混在文 200文) の PER が pyopenjtalk baseline を上回る**
-- **NFR-17** [MUST] (**v1.3 追加、haqumei 弱点狙い**): **7 hard-set 全カテゴリで haqumei baseline を上回る**こと。**特に以下で 0.5pt 以上の差をつけること** (haqumei に NN 補正がない領域):
-  - **多音字 hard-set** (haqumei は辞書優先度依存)
-  - **英字略語 hard-set** (haqumei は音写のみで読み判定なし)
-  - **固有名詞 hard-set** (haqumei は未知語 `pau` 落とし)
-  - **アクセント連続変異を含む文** (haqumei は Open JTalk 規則そのまま)
+- ~~**NFR-17**~~ (**deprecated 2026-07-04 v2.0**): ~~7 hard-set 全カテゴリで haqumei baseline を 0.5pt 以上上回る~~ → **reference-only 降格**: haqumei 数値は参考として測定するが acceptance criteria から除外。pure-NN 側の hard-set 目標は NFR-10〜16 で pyopenjtalk baseline 越えのみを MUST とする
+- **NFR-18** [MUST] (**v2.0 新規**): 7 hard-set 全カテゴリの pure-NN 数値を pure-NN 先行研究 4 モデル (CharsiuG2P / PnG BERT / Kakegawa / CC-G2PnP) の再測定結果と並べて公開する。**pure-NN 先行が hard-set 別 metric を公表していない = 本プロジェクトが初のデータポイントとして情報優位**
 
 ### 3.3 推論性能
 
 - **NFR-20** [MUST]: 1文 (~50文字) の p50 レイテンシがGPU (T4) 上で < 20ms
 - **NFR-21** [MUST]: 1文 (~50文字) の p50 レイテンシがCPU (x86 8-core) 上で < 100ms
-- **NFR-22** [SHOULD]: ハイブリッド推論の平均レイテンシがフル推論より30%以上高速
+- ~~**NFR-22**~~ (**deprecated 2026-07-04 v2.0**): ~~ハイブリッド推論の平均レイテンシがフル推論より30%以上高速~~ — hybrid path 削除に伴い連動。pure-NN の単一 forward pass のみを最適化対象とする
 - **NFR-23** [MAY]: GPU (RTX 4090) 上で p50 < 10ms
 
 ### 3.4 モデルサイズ
@@ -236,7 +269,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 - **NFR-33** [MUST]: **総 Ablation runs 数を 40〜60 runs以内**に制限する (単一 GPU 24GB で 8〜14日で完走可能な範囲)
 - **NFR-34** [MUST]: **各設定を最低 3 seed** で回し、frontier候補は 5 seed に増やす (Mosbach 25, Dodge 20 の慣行の縮小版)
 - **NFR-35** [MUST]: **軸確定の順序**を以下に固定する (先行軸で結果が良かった1点を固定して後続軸を回す):
-  1. **Tokenizer 軸** (Phase 2): SP / MeCab-pretokenize / char-level の 3設定 × 3 seed = 9 runs (130m 固定、中データ、lr=3e-5)
+  1. **Tokenizer 軸** (Phase 2): SP (P-A seq2seq) / char-level (P-C) の 2設定 × 3 seed = 6 runs (130m 固定、中データ、lr=3e-5。**P-B MeCab-pretokenize は v2.0 pivot で drop**)
   2. **Learning rate 軸** (Phase 2 末): 1e-5, 3e-5, 5e-5 の 3設定 × 3 seed = 9 runs (以降 LR は sweep しない)
   3. **Model size 軸** (Phase 5): 30m / 70m / 130m / 310m の 4設定 × 3 seed = 12 runs
   4. **Data 軸** (Phase 5): 100万 / 200万 / 500万 文 の 3設定 × 3 seed = 9 runs (scaling law)
@@ -288,7 +321,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 - **CR-01** [MUST]: `sbintuitions/modernbert-ja-130m` を主軸ベースモデルとして使用する ([05設計 §1.1])
 - **CR-02** [MUST]: Ablation対照として最低1つ以上の別トークナイザ系モデル (`llm-jp-modernbert-base` または `bert-base-japanese-char-v2`) を head-to-head 比較する
 - **CR-03** [MUST]: **SB Intuitions が明記する SentencePiece トークナイザーの token classification 弱点に対応する** ([01 §3.3])
-  - Phase 2 で seq2seq / MeCab-pretokenize / char-level BERT の 3並列パイロットを維持し、最良を選定
+  - Phase 2 で seq2seq (P-A) / char-level BERT (P-C) の 2並列パイロットを維持し、最良を選定 (**P-B MeCab-pretokenize は v2.0 pivot で drop — MeCab 依存が pure-NN 原則に反するため**)
 
 ### 4.2 データ
 
@@ -331,14 +364,14 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 - **CR-23** [MUST] (**v1.2 追加**): **JMDict は推論時 runtime lookup にのみ使用** — training gradient に含めない設計を実装する (Style-Bert-VITS2 + Misaki 先例)
 - **CR-24** [MUST] (**v1.2 追加**): **JSUT Basic5000 と JVS-3000 kana は評価専用**、学習コーパスから自動的に除外する CI check を設ける (data leakage 防止)
 - **CR-25** [SHOULD] (**v1.2 追加**): permissive-only スタック (Aozora 1.6M + UniDic + pyopenjtalk-plus + llm-jp-corpus) だけで 100万文コーパスを構築するオプションを常に維持する (Wikipedia依存の代替として)
-- **CR-26** [MUST] (**v1.3 追加**): **pyopenjtalk-plus 辞書 (tsukumijima/pyopenjtalk-plus) を hybrid path の primary 辞書に採用する** — haqumei と同一辞書を採用することでフェアな比較を確保 (haqumei の PER 1.17% は辞書由来 80-90% のため、辞書を変えると比較の意味が失われる)
-- **CR-27** [MUST] (**v1.3 追加**): **haqumei-eval と同一プロトコルの評価スクリプトを実装する**:
-  - JSUT: prj-beatrice/jsut-label の `basic5000.yaml` を SHA256 pin で使用 (haqumei-eval と同一データ)
-  - `pau` (無音) を無視した Levenshtein 距離ベース PER 計算
-  - `phone_level3` を canonical レベルとする
-  - `HaqumeiOptions { use_unidic_yomi: true, normalize_iu: Some(Yuu) }` 相当の前処理を実装
-  - ROHAN 側は `g2k_per_word` 文字単位 Levenshtein に準拠
-- **CR-28** [MUST] (**v1.3 追加**): **haqumei と本プロジェクトの評価を同一マシン・同一辞書バージョンで並走**する CI ジョブを設ける。両者の差分表を各リリースに添付する
+- ~~**CR-26**~~ (**deprecated 2026-07-04 v2.0**): ~~pyopenjtalk-plus 辞書を hybrid path の primary 辞書に採用する~~ — pure-NN pivot により hybrid path 自体が削除。ただし **pretraining の教師信号としての (surface, yomi) ペア利用は許容** (CR-91 参照, rule-leakage 開示範囲内)
+- **CR-27** [SHOULD] (**v1.3 → v2.0 で MUST → SHOULD 降格**): haqumei-eval と同一プロトコルの評価スクリプトは reference-only として実装する。**acceptance criteria から除外**。haqumei 数値との比較は Model Card と preprint の reference 章に掲載するが release gate には含めない:
+  - JSUT: prj-beatrice/jsut-label の `basic5000.yaml` を SHA256 pin で使用 (reference)
+  - `pau` (無音) を無視した Levenshtein 距離ベース PER 計算 (reference)
+  - `phone_level3` を canonical レベルとする (reference)
+  - `HaqumeiOptions { use_unidic_yomi: true, normalize_iu: Some(Yuu) }` 相当の前処理を実装 (reference)
+  - ROHAN 側は `g2k_per_word` 文字単位 Levenshtein に準拠 (reference)
+- **CR-28** [SHOULD] (**v1.3 → v2.0 で MUST → SHOULD 降格**): haqumei と本プロジェクトの評価を並走する CI ジョブは reference のみ。差分表は release gate 判定には使わないが preprint Table 1 の reference 列として掲載
 
 ### 4.4 開発フロー
 
@@ -352,9 +385,32 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 以下の主張は敵対的検証で棄却されているため、設計・実装の前提として使用してはならない ([04 §G], [07 §6], [CLAUDE.md]):
 
 - **CR-40** [MUST NOT]: 「NHK Kurihara 2024 が Japanese G2P を pure neural では unsolvable と framing」と引用しない
-- **CR-41** [MUST NOT]: 「PnG BERT が pure-NN の coverage-limited を明示的に framing」と引用しない
-- **CR-42** [MUST NOT]: 「CC-G2PnP が Dict-DNN hybrid を 6D-Eval で上回った」と引用しない (論文本文の主張だが verify で棄却)
-- **CR-43** [MUST NOT]: 単一 pure-NN モデルで pyopenjtalk を置換する設計を採用しない ([07 §7.1] の5つの実証的失敗パターンを根拠に)
+- **CR-41** [MUST NOT]: 「PnG BERT が pure-NN の coverage-limited を明示的に framing」と引用しない — Yasuda & Toda 2022 の paper 本文にこの強い主張は存在しない (evidence brief 検証済)。paper が実際に述べているのは "features … were not dominant in surface-form information with their masking strategy"
+- **CR-42** [MUST NOT]: 「CC-G2PnP が Dict-DNN hybrid を 6D-Eval で上回った」と引用しない — CC-G2PnP arxiv 2602.17157 Table 1 は Dict-DNN-NS (PnP CER 1.71, Phoneme CER 0.40, MOS 4.07) が CC-G2PnP-NS (1.80, 0.48, 4.02) に勝利。paper 本文の主張だが数値で refute
+- **CR-42b** [MUST NOT] (**v2.0 追加、Review-1 B2 訂正**): ~~「CC-G2PnP 6D-Eval SER 8.4%」と引用しない~~ — この数値は redesign spec の誤り。正しい引用は Table 1 の PnP CER 1.79-1.80% / Phoneme CER 0.48-0.52%
+- **CR-42c** [MUST NOT] (**v2.0 追加**): 「pure-NN で hybrid を越えた事例が公開ベンチに存在する」という強い主張を pure-text NN 領域で行わない (2026-07 時点で存在しない、pivot 認識前提)。**ただし Ohnaka 2025 arxiv 2506.04527 の speech+text NN が LARGE-TTSaug PER 0.93% で hybrid parity に迫っている点は informed reference として明示引用可**
+- ~~**CR-43**~~ (**v2.0 で反転**): ~~単一 pure-NN モデルで pyopenjtalk を置換する設計を採用しない~~ → **CR-43 (v2.0 新規、意味反転)**: **単一 pure-NN モデルで JSUT/JVS/ROHAN を評価する設計を採用する (MUST)**。[07 §7.1] の5つの実証的失敗パターンは "避けるべき前例" から "越えるべき baseline" に framing shift
+
+### 4.5a Pure-NN inference boundary + データ教師信号の rule-leakage 開示 (**v2.0 新規**)
+
+- **CR-90** [MUST] (**v2.0 新規**): **推論時に外部辞書 lookup を発生させない**。以下を推論パイプラインから排除する:
+  - pyopenjtalk / pyopenjtalk-plus の run_frontend / g2p / g2p_mapping_prosody 呼び出し
+  - MeCab / UniDic morphological analyzer の呼び出し
+  - JMDict / EDICT / 独自辞書の lookup
+  - Kanalizer ONNX の呼び出し (haqumei が英単語遭遇時のみ発火する経路)
+  - 例外: SentencePiece / char-level tokenizer の内部処理は "辞書 lookup" ではないため許容
+- **CR-91** [MUST] (**v2.0 新規、Review-1 B4 対応**): **学習信号としての辞書由来ペアの利用を明示的自己申告する**。以下を Model Card / preprint に開示:
+  - pyopenjtalk-plus 辞書 (~800K entries) を pretrain の MLM 教師信号として使用
+  - UniDic 全エントリ (~1M) を pretrain 教師信号として使用
+  - これらは rule-based tool 由来なので **PnG BERT が hit した同じ failure mode (pseudo-label ceiling) を継承する可能性を明示自己申告**
+  - **推論 pure-NN と学習信号 rule-supervised** の区別を README / Model Card / preprint で明示する
+- **CR-92** [MUST] (**v2.0 新規**): FR-61 の再測定において、pure-NN 先行 4 モデルを **カテゴリ別** に分類して比較 (Review-1 R1 対応):
+  - Category-A: pure-text encoder (本プロジェクト = target)
+  - Category-B: pure-text seq2seq (CharsiuG2P, Kakegawa TJ-G2P, Kurihara TJ-G2P baseline)
+  - Category-C: pure-text encoder+decoder MLM (PnG BERT)
+  - Category-D: ASR-style CTC (CC-G2PnP)
+  - Category-E (informed reference のみ): speech+text (Ohnaka 2025, Furigana Whisper, Hu 2025)
+  - Category-F (informed reference のみ): prosody-only (Koriyama SSW13 2025 arxiv 2507.03912)
 
 ### 4.6 計算資源
 
@@ -369,7 +425,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 - **CR-60** [MUST]: **Python ≥ 3.10** (ModernBERT は Python 3.10+ で公式サポート)
 - **CR-61** [MUST]: **PyTorch ≥ 2.1** (Flash Attention 2 対応), **transformers ≥ 4.48** (ModernBERT公式サポート)
-- **CR-62** [MUST]: **pyopenjtalk ≥ 0.4.0** または **pyopenjtalk-plus** をハイブリッド推論の primary path として使用
+- ~~**CR-62**~~ (**deprecated 2026-07-04 v2.0**): ~~pyopenjtalk ≥ 0.4.0 / pyopenjtalk-plus をハイブリッド推論の primary path として使用~~ — pure-NN pivot により hybrid path 削除。pyopenjtalk-plus は **開発時の教師信号生成用ツール** としてのみ dev dependency に残す (CR-91 の rule-leakage 開示範囲)、runtime dependency からは除外
 - **CR-63** [SHOULD]: ONNX Runtime ≥ 1.20 (ONNX 配布時のリファレンス推論エンジン)
 - **CR-64** [SHOULD]: CUDA 12.1+ / cuDNN 9+ (Flash Attention 2 の推奨バージョン)
 - **CR-65** [MAY]: MPS (Apple Silicon) はベストエフォート対応 (Phase 6 の Nice-to-have)
@@ -378,7 +434,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 - **CR-70** [MUST]: 以下の**3段階リリースゲート**を設ける:
   - **α (alpha)**: Phase 3完了時 (`v0.1.0-alpha.1`) — 内部評価のみ、HF Hub にはプライベート公開
-  - **β (beta)**: Phase 4完了時 (`v0.2.0-beta.1`) — HF Hub パブリック公開、限定的な社外テスター (Style-Bert-VITS2 コミュニティ主要メンテナ 3〜5名) の feedback 収集
+  - **β (beta)**: **Phase 4' (Pretrain-plus-fine-tune + Scale/Ablation) 完了時** (`v0.2.0-beta.1`) — HF Hub パブリック公開、限定的な社外テスター (Style-Bert-VITS2 コミュニティ主要メンテナ 3〜5名) の feedback 収集
   - **1.0 (stable)**: Phase 6完了時 (`v1.0.0`) — GitHub Releases + arxiv preprint + Model Card 一式公開
 - **CR-71** [MUST]: β リリース時点で **AC-01〜03 の全 MUST 要件を満たす**こと (Ablation の完全性のみが Phase 5 で追加される想定)
 - **CR-72** [SHOULD]: 各リリース時に downstream TTS (Style-Bert-VITS2 想定) との統合テストを 1件以上実施し、結果を公開する
@@ -401,24 +457,26 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
   - ⏳ pyopenjtalk JVS-3000 kana CER 1.03% の実測再現は未実施 (B-03)
   - ⏳ 3-baseline 1コマンド化 (`scripts/eval_baselines.sh`) は未実装 (B-05)
 - **AC-P1**: 統合スキーマの全データが `data/processed/` に格納され、5 hard-set が揃っている
-- **AC-P2**: 3並列パイロット (seq2seq / MeCab-pretokenize / char-level) の head-to-head 結果に基づき、Phase 3以降の主軸トークナイザ戦略が確定している
-- **AC-P3**: JSUT Basic5000 PER < 1.5% かつ JSUT accent-labeled subset mora-accent accuracy > 96.5% を達成する
-- **AC-P4**: **haqumei 越え** — JSUT PER < 1.0%, ROHAN KER < 1.5%, JVS-3000 kana CER < 0.9%
-- **AC-P5**: 「モデルサイズ vs 精度」「トークナイザー vs 精度」「学習データ量 vs 精度」の Pareto/scaling 曲線を提示できる
-- **AC-P6**: Hugging Face Hub / GitHub 公開、pyopenjtalk互換API、ONNX配布、標準ドキュメント一式が揃っている
+- **AC-P2**: 2並列パイロット (seq2seq / char-level。**P-B MeCab-pretokenize は v2.0 pivot で drop**) の head-to-head 結果に基づき、Phase 3以降の主軸トークナイザ戦略が確定している
+- **AC-P3**: JSUT Basic5000 PER < 1.5% かつ JSUT accent-labeled subset mora-accent accuracy > 96.5% を達成する **(v2.0 注: pure-NN で。1.5% は stretch tier に位置し得るが、pretrain-plus-fine-tune の最終段階を想定した Phase 3 exit criteria として保持)**
+- ~~**AC-P4**~~ **(v2.0 で書き換え)**: ~~haqumei 越え — JSUT PER < 1.0%, ROHAN KER < 1.5%, JVS-3000 kana CER < 0.9%~~ → **AC-P4 (v2.0 pure-NN 版)**: **pretrain-plus-fine-tune の pure-NN で JSUT PER < 5.0% を達成し、CharsiuG2P baseline (own-dict-holdout 10.51%) を **同一プロトコル (FR-61)** で明確に上回る**。旧 hybrid Phase 4 は削除、pretrain-plus-fine-tune に置換 (詳細は 06_implementation_roadmap.md の v2.0 更新)
+- **AC-P5**: 「モデルサイズ vs 精度」「トークナイザー vs 精度」「学習データ量 vs 精度」の Pareto/scaling 曲線を提示できる **(v2.0 で 3 週に拡大、Frontier LLM approach 分析 / ensemble ablation / LLM 蒸留予備実験を追加)**
+- **AC-P6** (**v2.0 更新**): Hugging Face Hub / GitHub 公開、~~pyopenjtalk互換API~~ **(pyopenjtalk 互換 wrapper は削除、削除)**、ONNX配布、標準ドキュメント一式が揃っている。**preprint Table 1 に pure-NN 4 モデル (JSUT/JVS/ROHAN × PnG BERT / Kakegawa / CharsiuG2P / CC-G2PnP / ours) 比較 table が固定されている (Category-A/B/C/D 別で)**
 
 ### 5.2 最終受け入れ (**プロジェクト完了**の条件)
 
-- **AC-01**: 3本柱すべてで **haqumei / OpenJTalk を明確に上回る** (最低0.15%以上の差) — NFR-01, NFR-02, NFR-03
-- **AC-02**: フロンティアLLM (Gemini 3.1 Pro 0.62%) との JVS-3000 差 < 0.2% (stretch: 差 < 0.1% あるいは越え)
-- **AC-03**: **7カテゴリ Hard-set全てで pyopenjtalk baseline を上回る** (NFR-10〜16)
-- **AC-04**: Style-Bert-VITS2 に投入した downstream TTS pronunciation CER が既存 pyopenjtalk投入時より改善する
-- **AC-05**: ドキュメントとサンプルコードで、外部開発者が pyopenjtalk のドロップイン置換として15分以内に動作確認できる
+- ~~**AC-01**~~ **(v2.0 で書き換え)**: ~~3本柱すべてで haqumei / OpenJTalk を明確に上回る (最低0.15%以上の差)~~ → **AC-01 (v2.0 pure-NN 版)**: **pure-NN 先行 4 モデル (CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP) を 3 本柱の全指標で上回る** (Category-A/B/C/D 全部を pure-text NN として並べた上で) — NFR-01, NFR-02, NFR-03, NFR-08
+- **AC-02** (**v2.0 で stretch 降格**): フロンティアLLM (Gemini 3.1 Pro 0.62%) との JVS-3000 差 < 0.2% は **stretch のみ** (MUST から SHOULD 相当に降格)
+- **AC-03**: **7カテゴリ Hard-set全てで pyopenjtalk baseline を上回る** (NFR-10〜16) **(v2.0: pure-NN の順伝播のみで達成する)**
+- ~~**AC-04**~~ (**deprecated 2026-07-04 v2.0**): ~~Style-Bert-VITS2 に投入した downstream TTS pronunciation CER が既存 pyopenjtalk投入時より改善する~~ — production TTS drop-in が目標でなくなったため削除
+- ~~**AC-05**~~ (**deprecated 2026-07-04 v2.0**): ~~pyopenjtalk のドロップイン置換として15分以内に動作確認~~ — research project positioning のため削除
 - **AC-06**: モデル配布 (HF Hub) + 評価スクリプト再現 (GitHub) が第三者に成立している
-- **AC-07** (**v1.1 追加**): **pyopenjtalk 互換テスト (FR-35) で辞書ヒット入力の一致率 ≥ 99.0%** を CI で維持している
+- ~~**AC-07**~~ (**deprecated 2026-07-04 v2.0**): ~~pyopenjtalk 互換テスト (FR-35) で辞書ヒット入力の一致率 ≥ 99.0%~~ — FR-35 削除に伴い連動
 - **AC-08** (**v1.1 追加**): **全 Ablation の総 GPU コストが US$100 以下** で完結している (実測レシート/クラウド利用明細で証跡)
 - **AC-09** (**v1.1 追加**): CHANGELOG.md に v0.1.0-alpha → v1.0.0 の全リリース精度差分と互換破壊が記録されている
 - **AC-10** (**v1.1 追加**): Model Card に bias / misuse disclosure が記載され、法務レビューを経ている
+- **AC-11** (**v2.0 新規**): Model Card / preprint に **CR-91 の rule-leakage 開示 (pyopenjtalk-plus / UniDic の教師信号としての利用) と CR-90 の inference boundary (pure-NN 推論保証) の対比** が明記されている
+- **AC-12** (**v2.0 新規**): FR-61 の pure-NN 先行 4 モデル同一プロトコル再測定結果が preprint Table 1 として掲載され、protocol harmonization (Review-1 R4) の §4 が `docs/research/09` に記載されている
 
 ---
 
@@ -426,14 +484,16 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 ### 6.1 MoSCoW
 
-**MUST have (P0〜P4 で完了)**:
-- 3本柱ベンチマークでの haqumei越え精度 (AC-01)
-- ハイブリッド推論パイプライン (FR-20〜22)
-- pyopenjtalk互換API + 互換テスト (FR-30〜32, FR-35)
+**MUST have (P0〜P4 で完了)** (**v2.0 pure-NN 化**):
+- **Pure-NN 先行 4 モデル越え** (AC-01) — CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP
+- **Pure-NN 制約 (推論時 dict lookup なし)** (FR-60〜62, CR-90〜92)
+- ~~ハイブリッド推論パイプライン (FR-20〜22)~~ **(deprecated v2.0)**
 - HF Hub / GitHub 公開 (FR-40〜41)
-- **多言語混在文対応 (英単語/略語/英数字/記号連結語)** (FR-06〜0A) — **v1.1 で MUST に昇格**
+- ~~pyopenjtalk互換API + 互換テスト (FR-30〜32, FR-35)~~ **(FR-35 deprecated v2.0; FR-30〜32 は pure-NN の g2p() 関数として保持)**
+- **多言語混在文対応 (英単語/略語/英数字/記号連結語) を pure-NN で** (FR-06〜0A, FR-07 は v2.0 で NN-only 化)
 - **SemVer準拠のバージョニング** (FR-44) — v1.1追加
 - **単一 24GB GPU 完走の primary configuration** (CR-52, NFR-60) — v1.1追加
+- **Pretraining-plus-fine-tune (Phase 4 置換)** で JSUT PER < 5.0% (AC-P4 v2.0)
 
 **SHOULD have (P5〜P6 で完了)**:
 - モデルサイズ Ablation (30M/70M/130M/310M) — NFR-33〜35 に具体化
@@ -455,11 +515,11 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 - **中国語・韓国語・その他アジア言語混在文** — v1.1で明示化
 - **ローマ字全文からの G2P** — v1.1で明示化
 
-### 6.2 Kano分析 (品質モデル)
+### 6.2 Kano分析 (品質モデル) (**v2.0 pure-NN 再設計**)
 
-- **Must-be** (無いと不満): JSUT PER < 1.17%、pyopenjtalk互換API、商用可ライセンス
-- **One-dimensional** (あるほど満足): モデルサイズが小さい、レイテンシが低い、Hard-set精度が高い
-- **Attractive** (あると驚喜): LLM並みの精度、pyopenjtalkを完全にdrop-in置換できる、日本語標準ベンチマークリーダーボードを立ち上げる
+- **Must-be** (無いと不満): Pure-NN 先行 4 モデル越え (CharsiuG2P / PnG BERT / Kakegawa / CC-G2PnP)、pure-NN 制約 (推論 dict-free)、商用可ライセンス
+- **One-dimensional** (あるほど満足): モデルサイズが小さい、レイテンシが低い、Hard-set精度が高い、pure-NN scaling law の解像度が高い
+- **Attractive** (あると驚喜): LLM並みの精度 (0.62%) を 130M pure-NN で近似、pure-NN 4 モデルを 5 倍以上上回る、日本語 pure-NN G2P 標準ベンチマークリーダーボードを立ち上げる、Ohnaka 2025 の speech+text NN と pure-text NN で parity に迫る
 
 ---
 
@@ -467,12 +527,14 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 | リスクID | 内容 | 予防策 | 対応要件 |
 |---|---|---|---|
-| **RISK-01** | トークナイザー選定の失敗 | Phase 2で3並列パイロット | CR-03 |
+| **RISK-01** | トークナイザー選定の失敗 | Phase 2で2並列パイロット (P-A/P-C) | CR-03 |
 | **RISK-02** | データライセンス問題 | Phase 1開始前に法務レビュー | CR-22 |
 | **RISK-03** | 計算資源不足 | LoRAとfull fine-tuneの両方を用意、130mから開始 | CR-51, CR-52 |
 | **RISK-04** | JVS-3000評価データ未公開 | 論文著者に問い合わせ、代替として自作JVSサブセット | AC-02 |
 | **RISK-05** | ModernBERTトークナイザー起因の性能悪化 | Phase 2で確認、必要ならchar-levelにpivot | CR-03 |
-| **RISK-06** | pure-NN で prosperity期待 | 反証済み前提を明示的に禁則化 | CR-40〜43 |
+| **RISK-06** (**v2.0 で意味反転**) | pure-NN で hybrid parity に到達できない可能性 | negative result も contribution として preprint publication path を確保、pretrain-plus-fine-tune (Phase 4 置換) + scaling ablation で最大限探索、Ohnaka 2025 speech+text の 0.93% を pure-text NN の informed reference として引用 | CR-40〜42, CR-90〜92, AC-P4 v2.0 |
+| **RISK-17** (**v2.0 新規**) | pyopenjtalk-plus 教師信号 = rule-based label pseudo-labeling で PnG BERT と同じ failure mode (surface-form 情報が dominant にならない) を継承する | CR-91 で明示自己申告し、pretrain 段階の validation で早期 detection、必要なら教師信号を UniDic のみに縮小 | CR-91, FR-62 |
+| **RISK-18** (**v2.0 新規、Review-1 B1 対応**) | 先行研究 4 モデルの protocol 不整合により FR-61 の再測定が困難 (CharsiuG2P 私有 test split, PnG BERT pretraining validation, Kakegawa 未 JSUT, CC-G2PnP 6D-Eval 私有) | 再測定不能なモデルは "own metric + our metric" の両方併記し、我々の JSUT/JVS/ROHAN 上の直接測定を主軸に | FR-61, CR-92 |
 | **RISK-07** | Hard-setアノテーション不足 | Phase 1で明示的キュレーション時間確保 | CR-14 |
 | **RISK-08** | Loss weight tuning が難航 | Phase 3で grid search を初期から計画 | (Phase 3 内部) |
 | **RISK-09** | 英単語混在文の学習データ不足 | Wikipedia tech記事、GitHub日本語README等の追加クローリング | CR-15 |
@@ -480,7 +542,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 | **RISK-11** | 略語のアルファベット読み vs 単語読み判定失敗 | 文脈依存の学習 + 明示的な略語辞書 (AI→エーアイ 等) 200件以上を Phase 1 で整備 | FR-07 |
 | **RISK-12** (v1.1) | Ablation 総 runs が単一GPUの実効上限を超え Phase 5 が期限超過 | one-axis-at-a-time で 40〜60 runs に事前制限、frontier候補のみ 5 seeds | NFR-33〜35 |
 | **RISK-13** (v1.1) | クラウド GPU スポット価格が想定を超え US$100 予算オーバー | RunPod Community / Vast.ai の複数プロバイダを並行検討、on-demand H100 は使わない | NFR-61, CR-55 |
-| **RISK-14** (v1.1) | pyopenjtalk 互換テストが FR-35 の 99.0% を下回る | Phase 4 で reconciliation strategy を再検討、辞書優先ポリシーを強化 | FR-35, FR-23 |
+| **RISK-14** (**v2.0 reframe**) | ~~pyopenjtalk 互換テストが FR-35 の 99.0% を下回る~~ (FR-35/FR-23 削除に伴い旧リスク廃止) → **Phase 4' (Pretrain-plus-fine-tune) の pretrain 段が fine-tune 後 PER を改善しない** | Phase 4' で pretrain 有無 ablation を必ず実施し gold-only fine-tune と併記、寄与ゼロなら教師信号構成を見直す | AC-P4 v2.0, FR-62 |
 | **RISK-15** (v1.1) | 悪用防止の観点で TTS ベンダから苦情 | Model Card の bias / misuse disclosure を Phase 6 レビューで法務確認 | CR-81, CR-82 |
 | **RISK-16** (v1.1) | 性能回帰 CI (NFR-72) が false positive で PR merge を阻害 | Baseline の統計的分散を Phase 5 で測定し閾値を調整 | NFR-70〜72 |
 
@@ -494,7 +556,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 |---|---|
 | コア設計思想 | `01_overview.md §3`, `05_technical_design.md §1〜3` |
 | 精度目標 | `01_overview.md §2`, `03_datasets_and_benchmarks.md §1〜3` |
-| ハイブリッド戦略 | `02_existing_systems.md §F`, `04_papers_and_references.md §A.2`, `08_market_landscape.md §9〜10` |
+| ~~ハイブリッド戦略~~ → Pure-NN 先行研究 baseline (**v2.0 pivot**) | `02_existing_systems.md §F`, `04_papers_and_references.md §A.2`, `08_market_landscape.md §9〜10`, **`09_pure_nn_g2p_benchmarks.md` (pivot 後の主 trace)** |
 | マルチタスク定式化 | `04_papers_and_references.md §A.3`, `05_technical_design.md §3.1` |
 | トークナイザー警告 | `01_overview.md §3.3`, `05_technical_design.md §2` |
 | pure-NN禁則 | `07_nn_only_benchmarks.md §7`, `CLAUDE.md` |
@@ -512,7 +574,7 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 
 - **OPEN-01** [✅ **RESOLVED v1.2**]: JVS-3000 kana アノテーションは **CyberAgent AI Lab** の GitHub リポジトリ `CyberAgentAILab/jvs_nonpara_kana` で完全公開。3,000文の手動アノテート kana + `eval_cer.py` 同梱。CC-BY-SA-4.0 (**評価専用 held-out に厳格分離**して学習に混入させない)。論文: Koriyama, "Benchmarking LLMs for G2P: A Japanese Case Study", Interspeech 2026, arxiv:2606.22009
 - **OPEN-02** [✅ **RESOLVED v1.2**]: Wikipedia日本語版 CC-BY-SA-4.0 の Share-Alike は、**モデル重み配布に継承しない解釈が支配的** (CC 2025 公式プライマー、Andersen v. Stability 判決、日本著作権法 30条の4)。先例: **Japanese StableLM / LLM-jp-3 が「日本語 Wikipedia + Apache-2.0 weights」を実施済み**。Model Card に法的立場を明記する形で採用可
-- **OPEN-03** [⏳ Phase 2 で確定]: 主軸トークナイザ戦略 (a=seq2seq / b=MeCab-pretokenize / c=char-level) は Phase 2 の 3並列パイロット結果を待つ (v1.1 NFR-35 で確定手順を規定済み)
+- **OPEN-03** [⏳ Phase 2 で確定]: 主軸トークナイザ戦略 (a=seq2seq / c=char-level。**b=MeCab-pretokenize は v2.0 pivot で drop**) は Phase 2 の 2並列パイロット結果を待つ (v1.1 NFR-35 で確定手順を規定済み)
 - **OPEN-04** [⏳ Phase 0〜3 任意タイミング]: モデル公開ブランド名 / リポジトリ名。仮称 "ModernBERT日本語G2P" のまま Phase 0 開始可、公開直前に確定
 - **OPEN-05** [✅ **RESOLVED v1.2**]: 最終ライセンスは **Apache-2.0** に決定。根拠: (1) Transformer architecture の patent grant 保護 (MIT にはない)、(2) 下流 OSS TTS 全てと互換 (Style-Bert-VITS2 AGPL / GPT-SoVITS MIT / Kokoro-Misaki Apache 等)、(3) ModernBERT (Answer.AI) 系との整合。MIT ベースの sbintuitions/modernbert-ja-130m を fine-tune した派生 weights を Apache-2.0 で配布は MIT permissive の再ライセンス可により合法
 
@@ -542,19 +604,22 @@ haqumei v0.8.0 徹底解剖により、以下が判明した (詳細は `02_exis
 | **1.2** | **2026-07-03** | **Phase 0 blocker 5件の並列調査結果を反映して OPEN-01〜05 のうち4件を解決**。(1) OPEN-01=✅JVS-3000 は CyberAgent AI Lab GitHub で公開、(2) OPEN-02=✅Wikipedia CC-BY-SA-4.0 は先例あり Apache-2.0 weights で配布可 (Japanese StableLM/LLM-jp-3 先例)、(3) OPEN-05=✅**ライセンスを Apache-2.0 に確定**、(4) JSUT テキストが CC-BY-SA-4.0 と判明 → eval only 分離を CR-24 で強制、(5) JMDict は runtime lookup のみ許可 (CR-23)、(6) Vast.ai を primary クラウドに確定 (RTX 4090 primary, RTX 3090 fallback)、(7) Hard-set キュレーションは LLM半自動 (C案) を primary手法に確定 | **Phase 0 開始可** |
 | **1.3** | **2026-07-03** | **haqumei v0.8.0 徹底解剖の結果を反映**。(1) **haqumei は "rule 天井"** — PER 1.17% の 80-90% は pyopenjtalk-plus 辞書由来、NN 由来はわずか 0-5% (Kanalizerは英単語遭遇時のみ発火)、(2) 攻撃ポイント FR-50〜54 追加 (BAS / polyphone / 略語判定 / 未知語処理 / mora accuracy 公表)、(3) haqumei-eval と同一プロトコル評価スクリプト実装を CR-27 で強制、(4) pyopenjtalk-plus 辞書採用を CR-26 で primary辞書として確定、(5) haqumei との並走 CI を CR-28 で追加、(6) 弱点カテゴリ (多音字/略語/固有名詞/連続変異) で haqumei に対し 0.5pt 以上の差をつけることを NFR-17 で強制、(7) mora accent accuracy を独自公表指標として NFR-07 に追加 (haqumei 非公表領域で情報優位) | Phase 0 開始可 |
 | **1.4** | **2026-07-03** | **プロソディ出力形式を拡張**。haqumei ProsodyFormat 実測動作確認に基づき、(1) FR-03 を「アクセント + イントネーション を1つのシーケンスに統合」に拡張、(2) FR-04 に canonical記号セット (`^` `$` `#` `[` `]` `?`) を明示、(3) FR-04a: 3種類の出力フォーマット (tdmelodic 風 / Prefix `L_H_` / Numeric `:0:1`) の MUST サポートを追加、(4) FR-04b: 単語単位 API (accent_nucleus, chain_flag, chain_rule, pos 等) の MUST サポートを追加、(5) FR-05a: 疑問文 `?` / 感嘆 / 引用境界 / pause 挿入 の SHOULD サポートを追加。**アクセントとイントネーションの両方を同時出力できる要件を明文化** | Phase 0 開始可 |
+| **2.0** | **2026-07-04** | **Pure-NN Research Pivot** (**破壊的変更**)。ユーザー方針転換 (rule-based 依存の hybrid では project 意義が消える) を反映。(1) **削除**: FR-20〜23 (hybrid 推論), FR-35 (pyopenjtalk 互換), FR-50〜53 (haqumei 越え攻撃戦略の hybrid 系), CR-26 (pyopenjtalk-plus 辞書 primary), AC-04 (Style-Bert-VITS2 downstream), AC-05 (pyopenjtalk drop-in), AC-07 (pyopenjtalk 互換テスト)。(2) **新規**: FR-60〜62 (pure-NN 制約), NFR-08〜09 (pure-NN 4 モデル越え + speech+text NN reference), NFR-18 (hard-set pure-NN 情報優位), CR-90〜92 (pure-NN inference boundary + rule-leakage 開示 + Category-A〜F 分類), CR-42b (CC-G2PnP 数値訂正), CR-42c (pure-text NN hybrid 越え存在しない claim), AC-11〜12 (rule-leakage 開示 + protocol harmonization), RISK-17〜18 (pseudo-label ceiling + protocol 不整合)。(3) **降格 (MUST → SHOULD / reference-only)**: NFR-05, NFR-06, NFR-17, CR-27, CR-28。(4) **反転**: CR-43 (pure-NN 禁則 → pure-NN MUST)。(5) **Review-1 adversarial critique の 4 blocker (B1〜B4) 対応**: B1=FR-61 で同一プロトコル再測定、B2=CC-G2PnP 6D-Eval SER 8.4% は誤りで Table 1 PnP CER 1.79-1.80%, B3=Frontier LLM は Koriyama Interspeech 2026 (arxiv 2606.22009) の直接引用、B4=CR-91 で pyopenjtalk-plus 教師信号 = rule-leakage の明示自己申告 | Phase 0 開始可 |
 
 ---
 
-## 12. 一言まとめ
+## 12. 一言まとめ (**v2.0 pure-NN pivot 版**)
 
-**本プロジェクトは「ModernBERT を単一の pyopenjtalk 置換モデルにする」のではなく、「haqumei/pyopenjtalk が崩れる領域 (アクセント連続変異 / 多音字 / OOV / 英日混在) を、市場に存在しない fine-tuned encoder NN で狙い撃ちで補正するハイブリッド」を作る**。
+**本プロジェクトは「ModernBERT (encoder-only pure-NN) の Japanese G2P 応用可能性を検証する研究プロジェクト」に転換する**。推論パスに rule/dict lookup を含めない (pure-NN 制約)。Primary target は pure-NN 日本語 G2P 先行 4 モデル (CharsiuG2P / PnG BERT / Kakegawa TJ-G2P / CC-G2PnP) を JSUT/JVS/ROHAN 標準ベンチで系統的に上回ること。haqumei / OpenJTalk / Frontier LLM は reference-only。
 
-**v1.3 の重要な追加洞察**: haqumei 徹底解剖 (v0.8.0) の結果、**haqumei の PER 1.17% はほぼ完全に "pyopenjtalk-plus 辞書 + 表記正規化" 由来** (NN 由来はわずか 0-5%)。つまり **haqumei は "rule 天井" であり "NN 天井" ではない**。本プロジェクトの ModernBERT が狙う BAS / polyphone / アクセント推定 / 略語判定は **haqumei が原理的に持たない改善軸** — 同じ pyopenjtalk-plus 辞書を採用しつつ NN 補正を上乗せする設計で、原理的に haqumei を上回れる。
+**v2.0 の pivot 根拠**: v1.3 の hybrid 差別化戦略は「同じ pyopenjtalk-plus 辞書を採用しつつ NN 補正を上乗せする」ものだった。しかしユーザーの正当な指摘 —「ルールベースの g2p の処理が入るのであればそれでいいのでこのプロジェクトをする必要がないです」— により、hybrid 経路は 130M ModernBERT を書く動機自体を失う。**pure-NN pivot により、既存 pure-NN 先行研究が全て hybrid に敗北している空白領域を、標準ベンチ 3 本柱で埋める初のデータポイントを提供する研究プロジェクトに再定義する**。
 
-要求定義の骨子は、この設計哲学を以下の**5層**でロックしている:
+**v2.0 の設計哲学 5層** (v1.1 の 5層構成を pure-NN 化):
 
-1. **精度目標** (NFR-01〜04): 3ティア (OpenJTalk / haqumei / フロンティアLLM) の明示的越え
-2. **Hard-set 制約** (NFR-10〜16): 7カテゴリ 各200文で pyopenjtalk baseline を上回る
-3. **pure-NN禁則** (CR-40〜43): 単一NN置換の設計を明示的に排除
-4. **v1.1 追加 — 計算実現可能性** (NFR-60〜64, CR-52〜55): 単一 24GB GPU / US$100以下 で全 Ablation を完走できることを制約に組み込む
-5. **v1.1 追加 — 段階リリース・悪用防止** (CR-70〜72, CR-80〜83): α → β → 1.0 の段階公開と、TTS 悪用防止・データ由来バイアス開示
+1. **精度目標 (pure-NN 3 段構成)** (NFR-01〜04, NFR-08〜09): Conservative < 5.0% / Stretch < 2.0% / Aspirational < 0.5-0.62% (LLM 並)、pure-NN 4 モデル越えを MUST、Ohnaka 2025 speech+text 0.93% を informed reference
+2. **Hard-set 制約 (pure-NN で pyopenjtalk baseline 越え)** (NFR-10〜16, NFR-18): 7カテゴリ 各200文で pure-NN の順伝播のみで pyopenjtalk baseline を上回る
+3. **Pure-NN 制約と rule-leakage 開示** (CR-40〜43 意味反転, CR-90〜92, FR-60〜62): 推論 dict-free を MUST、pretraining 教師信号としての辞書利用は許容だが明示自己申告
+4. **v1.1 由来 — 計算実現可能性** (NFR-60〜64, CR-52〜55): 単一 24GB GPU / US$100以下 で全 Ablation を完走
+5. **v1.1 由来 — 段階リリース・悪用防止** (CR-70〜72, CR-80〜83): α → β → 1.0 と、bias / misuse disclosure
+
+**Negative result publication path**: 仮に pure-NN で hybrid に届かなくても、pure-NN の JSUT/JVS/ROHAN 上の scaling law を初めて公開する意義を preprint に明記する。「pure-NN で hybrid parity 到達失敗の re-confirmation」も学術的 contribution として位置付ける (詳細は `docs/research/09` の §6 で規定)。

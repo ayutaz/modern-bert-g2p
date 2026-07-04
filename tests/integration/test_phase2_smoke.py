@@ -1,25 +1,22 @@
-"""End-to-end smoke tests for the three Phase 2 pilots (Track T11).
+"""End-to-end smoke tests for the Phase 2 pilots (Track T11).
 
 Exercises the public interfaces of tracks T1 (canonical + Vocab), T3 (P-A
-seq2seq), T4 (P-B MeCab + [MORPH]) and T5 (P-C char BERT) end-to-end on
-tiny CPU configs. Verifies:
+seq2seq) and T5 (P-C char BERT) end-to-end on tiny CPU configs. Verifies:
 
 - forward returns correctly shaped tensors and a finite loss;
 - one optimizer step propagates finite gradients to the target embedding
   and the output head;
 - 20 hand-crafted per-pilot patterns canonicalize to the expected form;
-- three pilots given semantically equivalent inputs produce identical
+- two pilots given semantically equivalent inputs produce identical
   :class:`CanonicalForm` tuples (required for fair PER comparison);
 - real T2 tokenizers thread through T6 collators into the pilot models
   end-to-end (G3), catching pad-id / interface mismatches that fake
-  tokenizers would hide;
-- padded morpheme APBP labels (``-100``) are ignored by
-  :meth:`PBMorphBERT._per_morph_flat_ce` (G4).
+  tokenizers would hide.
 
 All tests are guarded by ``pytest.importorskip("torch")`` so the module
-skips cleanly on environments without the training stack. The P-B and
-P-C model checks additionally skip if their model modules have not yet
-been implemented by their owning tracks.
+skips cleanly on environments without the training stack. The P-C model
+checks additionally skip if their model module has not yet been
+implemented by their owning track.
 """
 
 from __future__ import annotations
@@ -37,20 +34,16 @@ from modernbert_g2p.models.canonical import (  # noqa: E402
     Vocab,
     build_default_vocab,
     p_a_to_canonical,
-    p_b_to_canonical,
     p_c_to_canonical,
 )
 from modernbert_g2p.models.p_a import PAConfig, build_p_a  # noqa: E402
-from modernbert_g2p.models.p_b.config import PBConfig  # noqa: E402
 from modernbert_g2p.models.p_c.config import PCConfig  # noqa: E402
 from modernbert_g2p.models.tokenization import (  # noqa: E402
     PATokenizer,
-    PBTokenizer,
     PCTokenizer,
 )
 from modernbert_g2p.training.data import (  # noqa: E402
     PACollator,
-    PBCollator,
     PCCollator,
     make_dummy_row,
 )
@@ -58,14 +51,6 @@ from modernbert_g2p.training.data import (  # noqa: E402
 
 def _ids(vocab: Vocab, tokens: str) -> list[int]:
     return [vocab.id_of(t) for t in tokens.split()]
-
-
-def _build_p_b_or_skip(config: PBConfig) -> Any:
-    try:
-        from modernbert_g2p.models.p_b import build_p_b
-    except ImportError as exc:  # pragma: no cover - defensive against T4 in-flight
-        pytest.skip(f"P-B model module not yet available: {exc}")
-    return build_p_b(config)
 
 
 def _build_p_c_or_skip(
@@ -184,70 +169,6 @@ class TestPAForwardBackward:
         assert torch.isfinite(loss).item()
 
 
-class TestPBForwardBackward:
-    def _batch(
-        self,
-        cfg: PBConfig,
-        *,
-        batch: int = 1,
-        seq_len: int = 16,
-        num_morphs: int = 3,
-    ) -> dict[str, torch.Tensor]:
-        input_ids = torch.randint(0, cfg.encoder_vocab_size, (batch, seq_len))
-        attention_mask = torch.ones(batch, seq_len, dtype=torch.long)
-        morph_positions = torch.tensor(
-            [[0, 5, 10]] * batch, dtype=torch.long
-        )[:, :num_morphs]
-        morph_lens = torch.tensor(
-            [[4, 4, 4]] * batch, dtype=torch.long
-        )[:, :num_morphs]
-        morph_labels_phon = torch.randint(
-            1,
-            cfg.phoneme_vocab_size,
-            (batch, num_morphs, cfg.max_mora_per_morph),
-        )
-        morph_labels_apbp = torch.randint(0, 3, (batch, num_morphs))
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "morph_positions": morph_positions,
-            "morph_lens": morph_lens,
-            "morph_labels_phon": morph_labels_phon,
-            "morph_labels_apbp": morph_labels_apbp,
-        }
-
-    def test_p_b_forward(self) -> None:
-        _seed(2)
-        cfg = PBConfig.tiny(head_variant="B1")
-        model = _build_p_b_or_skip(cfg)
-        model.eval()
-        batch = self._batch(cfg, batch=1, seq_len=16, num_morphs=3)
-        out = model(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            morph_positions=batch["morph_positions"],
-            morph_lens=batch["morph_lens"],
-        )
-        assert "phon_logits" in out
-        expected = (1, 3, cfg.max_mora_per_morph, cfg.phoneme_vocab_size)
-        assert tuple(out["phon_logits"].shape) == expected
-
-    def test_p_b_backward(self) -> None:
-        _seed(3)
-        cfg = PBConfig.tiny(head_variant="B1")
-        model = _build_p_b_or_skip(cfg)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
-        batch = self._batch(cfg, batch=1, seq_len=16, num_morphs=3)
-        out = model(**batch)
-        loss = out["loss"]
-        assert loss.requires_grad
-        loss.backward()
-        assert torch.isfinite(loss).item()
-        assert _all_finite_grads(model.parameters())
-        optimizer.step()
-        optimizer.zero_grad()
-
-
 class TestPCForwardBackward:
     ENCODER_VOCAB = 500
 
@@ -357,74 +278,6 @@ class TestPACanonicalPatterns:
         assert cf.accent_boundaries == boundaries
 
 
-PB_PATTERNS: list[
-    tuple[list[str], list[list[str]], list[str], tuple[str, ...], tuple[str, ...], tuple[int, ...]]
-] = [
-    (["w a t a sh i"], [["L", "H", "H"]], ["O"],
-     ("w", "a", "t", "a", "sh", "i"), ("L", "H", "H"), ()),
-    (["k a"], [["L", "H"]], ["O"],
-     ("k", "a"), ("L", "H"), ()),
-    (["sh i", "m a"], [["L"], ["H"]], ["O", "O"],
-     ("sh", "i", "m", "a"), ("L", "H"), ()),
-    (["a"], [["H"]], ["O"],
-     ("a",), ("H",), ()),
-    (["w a t a sh i", "d e s u"], [["L", "H", "H"], ["L", "L"]], ["O", "B"],
-     ("w", "a", "t", "a", "sh", "i", "d", "e", "s", "u"), ("L", "H", "H", "L", "L"), (3,)),
-    (["a", "i", "u"], [["H"], ["L"], ["H"]], ["O", "O", "O"],
-     ("a", "i", "u"), ("H", "L", "H"), ()),
-    (["a", "i"], [["H"], ["L"]], ["B", "O"],
-     ("a", "i"), ("H", "L"), ()),
-    (["a", "k a", "s a", "t a"], [["H"], ["L"], ["H"], ["L"]], ["O", "B", "O", "B"],
-     ("a", "k", "a", "s", "a", "t", "a"), ("H", "L", "H", "L"), (1, 3)),
-    (["h o N"], [["L", "L"]], ["O"],
-     ("h", "o", "N"), ("L", "L"), ()),
-    (["k y o u"], [["L", "H"]], ["O"],
-     ("k", "y", "o", "u"), ("L", "H"), ()),
-    (["ky o u"], [["L", "H"]], ["O"],
-     ("ky", "o", "u"), ("L", "H"), ()),
-    (["N i h o N", "g o"], [["L", "H", "H", "H"], ["L"]], ["O", "O"],
-     ("N", "i", "h", "o", "N", "g", "o"), ("L", "H", "H", "H", "L"), ()),
-    (["t o", "k y o u"], [["L"], ["H", "H"]], ["O", "B"],
-     ("t", "o", "k", "y", "o", "u"), ("L", "H", "H"), (1,)),
-    (["m o j i"], [["H", "H"]], ["O"],
-     ("m", "o", "j", "i"), ("H", "H"), ()),
-    (["p a N"], [["H", "L"]], ["O"],
-     ("p", "a", "N"), ("H", "L"), ()),
-    (["r a i", "n e N"], [["L", "H"], ["L", "H"]], ["O", "B"],
-     ("r", "a", "i", "n", "e", "N"), ("L", "H", "L", "H"), (2,)),
-    (["g a k", "k o u"], [["L", "H"], ["H", "L"]], ["O", "O"],
-     ("g", "a", "k", "k", "o", "u"), ("L", "H", "H", "L"), ()),
-    (["a"], [["L"]], ["O"],
-     ("a",), ("L",), ()),
-    (["e"], [["H"]], ["O"],
-     ("e",), ("H",), ()),
-    (["k a k i", "k u k e k o"], [["L", "H"], ["H", "L", "L"]], ["O", "B"],
-     ("k", "a", "k", "i", "k", "u", "k", "e", "k", "o"), ("L", "H", "H", "L", "L"), (2,)),
-]
-
-
-class TestPBCanonicalPatterns:
-    @pytest.mark.parametrize(
-        ("phon_tokens", "hl_slots", "apbp", "phonemes", "accents", "boundaries"),
-        PB_PATTERNS,
-    )
-    def test_pattern(
-        self,
-        phon_tokens: list[str],
-        hl_slots: list[list[str]],
-        apbp: list[str],
-        phonemes: tuple[str, ...],
-        accents: tuple[str, ...],
-        boundaries: tuple[int, ...],
-    ) -> None:
-        vocab = build_default_vocab()
-        phon_ids = [_ids(vocab, s) for s in phon_tokens]
-        cf = p_b_to_canonical(phon_ids, hl_slots, apbp, vocab)
-        assert cf.phonemes == phonemes
-        assert cf.mora_accents == accents
-        assert cf.accent_boundaries == boundaries
-
-
 PC_PATTERNS: list[
     tuple[list[str], list[list[str]], list[str], tuple[str, ...], tuple[str, ...], tuple[int, ...]]
 ] = [
@@ -498,9 +351,6 @@ UNIFIED_CASES: list[tuple[
     tuple[str, ...],  # mora_accents
     tuple[int, ...],  # accent_boundaries
     str,              # P-A stream (space-separated tokens between <bos>/<eos>)
-    list[str],        # P-B morph phoneme strings
-    list[list[str]],  # P-B per-morph H/L
-    list[str],        # P-B APBP BIO
     list[str],        # P-C char phoneme strings
     list[list[str]],  # P-C per-char H/L
     list[str],        # P-C APBP BIO
@@ -509,36 +359,31 @@ UNIFIED_CASES: list[tuple[
         ("w", "a", "t", "a", "sh", "i"), ("L", "H", "H"), (),
         "w a L t a H sh i H",
         ["w a t a sh i"], [["L", "H", "H"]], ["O"],
-        ["w a t a sh i"], [["L", "H", "H"]], ["O"],
     ),
     (
         ("k", "a"), ("H",), (),
         "k a H",
-        ["k a"], [["H"]], ["O"],
         ["k a"], [["H"]], ["O"],
     ),
     (
         ("k", "a", "s", "a"), ("L", "H"), (1,),
         "k a L / s a H",
         ["k a", "s a"], [["L"], ["H"]], ["O", "B"],
-        ["k a", "s a"], [["L"], ["H"]], ["O", "B"],
     ),
     (
         ("h", "o", "N"), ("L", "L"), (),
         "h o L N L",
-        ["h o N"], [["L", "L"]], ["O"],
         ["h o N"], [["L", "L"]], ["O"],
     ),
     (
         ("ky", "o", "u"), ("L", "H"), (),
         "ky o L u H",
         ["ky o u"], [["L", "H"]], ["O"],
-        ["ky o u"], [["L", "H"]], ["O"],
     ),
 ]
 
 
-class TestAllThreeProduceSameCanonical:
+class TestAllTwoProduceSameCanonical:
     """Cross-pilot invariant: identical semantics ⇒ identical canonical form."""
 
     @pytest.mark.parametrize(
@@ -547,9 +392,6 @@ class TestAllThreeProduceSameCanonical:
             "accents",
             "boundaries",
             "pa_stream",
-            "pb_phon",
-            "pb_hl",
-            "pb_apbp",
             "pc_phon",
             "pc_hl",
             "pc_apbp",
@@ -562,9 +404,6 @@ class TestAllThreeProduceSameCanonical:
         accents: tuple[str, ...],
         boundaries: tuple[int, ...],
         pa_stream: str,
-        pb_phon: list[str],
-        pb_hl: list[list[str]],
-        pb_apbp: list[str],
         pc_phon: list[str],
         pc_hl: list[list[str]],
         pc_apbp: list[str],
@@ -576,22 +415,18 @@ class TestAllThreeProduceSameCanonical:
             accent_boundaries=boundaries,
         )
         # Beware the test relies solely on hand-crafted decoder outputs; no
-        # learned parameters are involved, so agreement here proves the three
+        # learned parameters are involved, so agreement here proves the two
         # canonicalizers produce identical CanonicalForm instances under
         # equivalent semantics.
         pa_ids = [vocab.bos_id, *_ids(vocab, pa_stream), vocab.eos_id]
         pa_out = p_a_to_canonical(pa_ids, vocab)
 
-        pb_phon_ids = [_ids(vocab, s) for s in pb_phon]
-        pb_out = p_b_to_canonical(pb_phon_ids, pb_hl, pb_apbp, vocab)
-
         pc_phon_ids = [_ids(vocab, s) for s in pc_phon]
         pc_out = p_c_to_canonical(pc_phon_ids, pc_hl, pc_apbp, vocab)
 
         assert pa_out == expected
-        assert pb_out == expected
         assert pc_out == expected
-        assert pa_out == pb_out == pc_out
+        assert pa_out == pc_out
 
 
 class _FakeHFTokenizer:
@@ -659,38 +494,6 @@ class _FakeHFTokenizer:
         return result
 
 
-class _MockPBPretokenizer:
-    """Fugashi-free P-B pretokenizer that fabricates equal-length morphemes.
-
-    Emits three ``MeCabToken`` records per input by slicing the text into
-    thirds. Guarantees ``num_morphs == 3`` so batch-level padding logic is
-    exercised even for short inputs.
-    """
-
-    def pretokenize(self, text: str) -> list[Any]:
-        from modernbert_g2p.models.p_b.mecab import MeCabToken
-
-        if not text:
-            return []
-        n = max(len(text), 3)
-        per = max(n // 3, 1)
-        tokens: list[MeCabToken] = []
-        cursor = 0
-        for i in range(3):
-            end = min(cursor + per, len(text)) if i < 2 else len(text)
-            surface = text[cursor:end]
-            if not surface:
-                surface = text[cursor : cursor + 1] or text[:1]
-                end = cursor + len(surface)
-            tokens.append(
-                MeCabToken(surface=surface, start=cursor, end=end, pos="名詞")
-            )
-            cursor = end
-            if cursor >= len(text):
-                break
-        return tokens
-
-
 class _PATokenizerAdapter:
     """Adapt real :class:`PATokenizer` to the batched T6 collator API.
 
@@ -715,39 +518,6 @@ class _PATokenizerAdapter:
 
     def encode_target(self, canonical: CanonicalForm) -> Any:
         return self._real.encode_target(canonical)
-
-
-class _PBTokenizerAdapter:
-    """Adapt real :class:`PBTokenizer` to the batched T6 collator API.
-
-    Nests ``morph_positions`` / ``morph_lens`` under ``enc["extras"]`` as
-    the T6 :class:`PBCollator` expects (design ref: review B4).
-    """
-
-    def __init__(self, real: PBTokenizer) -> None:
-        self._real = real
-        self.pad_token_id: int = real.pad_token_id
-        self.morph_id: int = real.morph_id
-
-    def encode(self, texts: list[str]) -> dict[str, Any]:
-        input_ids: list[list[int]] = []
-        attention_mask: list[list[int]] = []
-        morph_positions: list[list[int]] = []
-        morph_lens: list[list[int]] = []
-        for t in texts:
-            enc = self._real.encode_input(t)
-            input_ids.append(list(enc["input_ids"]))
-            attention_mask.append(list(enc["attention_mask"]))
-            morph_positions.append(list(enc["morph_positions"]))
-            morph_lens.append(list(enc["morph_lens"]))
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "extras": {
-                "morph_positions": morph_positions,
-                "morph_lens": morph_lens,
-            },
-        }
 
 
 class _PCTokenizerAdapter:
@@ -894,105 +664,6 @@ class TestPACollatorRealTokenizerE2E:
         assert torch.isfinite(loss).item()
 
 
-class TestPBCollatorRealTokenizerE2E:
-    """Thread real ``PBTokenizer`` (mock pretokenizer) through ``PBCollator``.
-
-    Covers review gap G3 (B4 nested extras) and I1 (slot pad id).
-    """
-
-    def _cfg(self) -> PBConfig:
-        vocab_size = build_default_vocab().size
-        return PBConfig(
-            encoder_name="tiny",
-            head_variant="B1",
-            encoder_hidden=32,
-            phoneme_vocab_size=vocab_size,
-            max_mora_per_morph=4,
-            encoder_vocab_size=1024,
-            morph_token_id=15,
-        )
-
-    def _build(self, cfg: PBConfig) -> tuple[_PBTokenizerAdapter, PBCollator]:
-        vocab = build_default_vocab()
-        real = PBTokenizer(
-            hf_tokenizer=_FakeHFTokenizer(),
-            pretokenizer=_MockPBPretokenizer(),
-            max_mora_per_morph=cfg.max_mora_per_morph,
-            phoneme_vocab=vocab,
-        )
-        adapter = _PBTokenizerAdapter(real)
-        collator = PBCollator(
-            adapter,
-            pad_to_multiple_of=8,
-            max_slot=cfg.max_mora_per_morph,
-            phoneme_pad_id=-100,
-            hl_pad_id=-100,
-            apbp_pad_id=-100,
-        )
-        return adapter, collator
-
-    def test_forward_backward_through_collator(self) -> None:
-        _seed(200)
-        cfg = self._cfg()
-        _adapter, collator = self._build(cfg)
-        try:
-            from modernbert_g2p.models.p_b import build_p_b
-        except ImportError as exc:  # pragma: no cover
-            pytest.skip(f"P-B model unavailable: {exc}")
-
-        batch = collator(_sample_rows())
-        expected_keys = {
-            "input_ids",
-            "attention_mask",
-            "morph_positions",
-            "morph_lens",
-            "morph_labels_phon",
-            "morph_labels_hl",
-            "morph_labels_apbp",
-            "dict_hit_mask",
-            "sample_weights",
-            "ids",
-        }
-        assert expected_keys <= set(batch.keys())
-        assert batch["morph_labels_phon"].shape[-1] == cfg.max_mora_per_morph
-        # I1: padded slots must carry -100 so ignore_index=-100 in the model
-        # loss zeros out their contribution (no silent gradient on class 0).
-        assert (batch["morph_labels_phon"] == -100).any().item()
-
-        b_size = batch["input_ids"].size(0)
-        m_dim = batch["morph_positions"].size(1)
-        input_ids = batch["input_ids"].clamp(max=cfg.encoder_vocab_size - 1)
-        seq_len = input_ids.size(1)
-        morph_positions = batch["morph_positions"].clamp(max=seq_len - 1)
-        morph_lens = batch["morph_lens"].clamp(max=max(seq_len - 1, 1))
-
-        # NOTE: batch["morph_labels_hl"] uses canonical vocab ids (H=48 etc.)
-        # but the model's HL head is 2-class — this is a pre-existing T4/T6
-        # interface mismatch tracked separately. We pass ``morph_labels_hl=None``
-        # here to exercise the phoneme + APBP loss branches through the collator
-        # without depending on that fix.
-        model = build_p_b(cfg)
-        out = model(
-            input_ids=input_ids,
-            attention_mask=batch["attention_mask"],
-            morph_positions=morph_positions,
-            morph_lens=morph_lens,
-            morph_labels_phon=batch["morph_labels_phon"],
-            morph_labels_hl=None,
-            morph_labels_apbp=batch["morph_labels_apbp"],
-            dict_hit_mask=batch["dict_hit_mask"],
-            sample_weights=batch["sample_weights"],
-        )
-        loss = out["loss"]
-        assert loss is not None
-        assert torch.isfinite(loss).item()
-        expected_shape = (b_size, m_dim, cfg.max_mora_per_morph, cfg.phoneme_vocab_size)
-        assert tuple(out["phon_logits"].shape) == expected_shape
-
-        loss.backward()
-        assert _all_finite_grads(model.parameters())
-
-
 class TestPCCollatorRealTokenizerE2E:
     """Thread real ``PCTokenizer`` (fake HF) through ``PCCollator`` into ``PCCharBERT``.
 
@@ -1062,103 +733,3 @@ class TestPCCollatorRealTokenizerE2E:
 
         loss.backward()
         assert _all_finite_grads(model.parameters())
-
-
-class TestPBPaddedAPBPLabelsIgnored:
-    """G4: ``_per_morph_flat_ce`` correctly ignores ``-100`` in APBP labels.
-
-    Constructs a batch by hand where ``morph_labels_apbp`` contains
-    ``-100`` in some positions (padded morphs). The current unit tests
-    for :class:`PBMorphBERT` never supply ``-100`` in APBP labels, so
-    that branch was untested.
-    """
-
-    def _cfg(self) -> PBConfig:
-        return PBConfig.tiny(head_variant="B1")
-
-    def _batch(
-        self,
-        cfg: PBConfig,
-        *,
-        batch: int = 2,
-        seq_len: int = 16,
-        num_morphs: int = 4,
-        pad_morphs: int = 2,
-    ) -> dict[str, torch.Tensor]:
-        input_ids = torch.randint(0, cfg.encoder_vocab_size, (batch, seq_len))
-        attention_mask = torch.ones(batch, seq_len, dtype=torch.long)
-        morph_positions = torch.zeros(batch, num_morphs, dtype=torch.long)
-        morph_lens = torch.ones(batch, num_morphs, dtype=torch.long)
-        for b in range(batch):
-            stride = max(seq_len // (num_morphs + 1), 1)
-            for m in range(num_morphs):
-                morph_positions[b, m] = min(m * stride, seq_len - 2)
-                morph_lens[b, m] = 1
-
-        morph_labels_phon = torch.randint(
-            1,
-            cfg.phoneme_vocab_size,
-            (batch, num_morphs, cfg.max_mora_per_morph),
-        )
-        morph_labels_hl = torch.randint(0, 2, (batch, num_morphs, cfg.max_mora_per_morph))
-        morph_labels_apbp = torch.randint(0, 3, (batch, num_morphs))
-
-        if pad_morphs > 0:
-            morph_labels_phon[:, -pad_morphs:, :] = -100
-            morph_labels_hl[:, -pad_morphs:, :] = -100
-            morph_labels_apbp[:, -pad_morphs:] = -100
-
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "morph_positions": morph_positions,
-            "morph_lens": morph_lens,
-            "morph_labels_phon": morph_labels_phon,
-            "morph_labels_hl": morph_labels_hl,
-            "morph_labels_apbp": morph_labels_apbp,
-        }
-
-    def test_padded_apbp_positions_ignored(self) -> None:
-        _seed(400)
-        cfg = self._cfg()
-        try:
-            from modernbert_g2p.models.p_b import build_p_b
-        except ImportError as exc:  # pragma: no cover
-            pytest.skip(f"P-B model unavailable: {exc}")
-        model = build_p_b(cfg)
-        batch = self._batch(cfg, pad_morphs=2)
-        out = model(**batch)
-        loss = out["loss"]
-        assert loss is not None
-        assert torch.isfinite(loss).item()
-
-    def test_all_apbp_padded_yields_zero_apbp_term(self) -> None:
-        """If EVERY APBP label is ``-100`` the APBP contribution to loss is 0.
-
-        We compute the loss with all APBP labels padded and compare to a
-        variant where APBP labels are dropped entirely; the two must match
-        because the ignore branch reduces to zero contribution.
-        """
-        _seed(401)
-        cfg = self._cfg()
-        try:
-            from modernbert_g2p.models.p_b import build_p_b
-        except ImportError as exc:  # pragma: no cover
-            pytest.skip(f"P-B model unavailable: {exc}")
-
-        model = build_p_b(cfg)
-        model.eval()
-        batch = self._batch(cfg, pad_morphs=0)
-        batch_all_pad_apbp = {**batch}
-        batch_all_pad_apbp["morph_labels_apbp"] = torch.full_like(
-            batch["morph_labels_apbp"], -100
-        )
-        with torch.no_grad():
-            loss_masked = model(**batch_all_pad_apbp)["loss"]
-            no_apbp_batch = {k: v for k, v in batch.items() if k != "morph_labels_apbp"}
-            loss_dropped = model(**no_apbp_batch)["loss"]
-        assert loss_masked is not None
-        assert loss_dropped is not None
-        assert torch.isfinite(loss_masked).item()
-        assert torch.isfinite(loss_dropped).item()
-        assert torch.allclose(loss_masked, loss_dropped, atol=1e-5)

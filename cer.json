@@ -1,0 +1,9 @@
+{
+  "cer": 0.01087403951701427,
+  "cer_percent": 1.0874039517014271,
+  "num_chars": 87456,
+  "num_errors": 951.0,
+  "num_utts": 3000,
+  "target_percent": 1.03,
+  "delta_pt": 0.05740395170142709
+}

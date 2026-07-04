@@ -10,16 +10,14 @@ Track T2. Two encode-side interfaces are supported for compatibility:
 - ``encode_input(text: str) -> {"input_ids", "attention_mask", ...}``
   (single-string; matches the real Track T2 wrappers around HF tokenizers).
 
-Extras (``morph_positions``, ``morph_lens``, ``dict_hit_mask``,
-``char_positions``, etc.) are read from ``enc["extras"][key]`` first, then
-from ``enc[key]`` at the top level as a fallback.
+Extras (``char_positions``, etc.) are read from ``enc["extras"][key]``
+first, then from ``enc[key]`` at the top level as a fallback.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Protocol
@@ -33,13 +31,6 @@ class _PATokenizerLike(Protocol):
 
     def encode_input(self, text: str) -> dict[str, Any]: ...
     def encode_target(self, canonical: Any) -> Any: ...
-
-
-class _PBTokenizerLike(Protocol):
-    pad_token_id: int
-    morph_id: int
-
-    def encode_input(self, text: str) -> dict[str, Any]: ...
 
 
 class _PCTokenizerLike(Protocol):
@@ -295,27 +286,6 @@ def _prepare_pa_target(
     return ids[:-1], ids[1:]
 
 
-@dataclass(frozen=True, slots=True)
-class _MoraSpan:
-    """Mora index range assigned to a single morpheme."""
-    start: int
-    end: int
-
-
-def _split_mora_by_morph(
-    row: Row,
-    morph_lens_in_moras: Sequence[int],
-) -> list[_MoraSpan]:
-    total = len(row.mora_accents)
-    spans: list[_MoraSpan] = []
-    cursor = 0
-    for m in morph_lens_in_moras:
-        end = min(cursor + int(m), total)
-        spans.append(_MoraSpan(cursor, end))
-        cursor = end
-    return spans
-
-
 class PACollator:
     """Collate a list of :class:`Row` into a P-A seq2seq training batch.
 
@@ -388,211 +358,6 @@ class PACollator:
             "ids": ids,
         }
 
-
-class PBCollator:
-    """Collate a list of :class:`Row` into a P-B MeCab-pretokenized training batch.
-
-    ``tokenizer`` MUST expose:
-    - ``encode(texts: list[str]) -> {"input_ids", "attention_mask", "extras": {"morph_positions", "morph_lens", "dict_hit_mask", "morph_lens_in_moras" (optional), "apbp" (optional list of BIO strings)}}``
-    - ``pad_token_id: int``
-    - ``morph_id: int``
-
-    Optional extras (``morph_lens_in_moras``, ``apbp``) are consumed if the
-    tokenizer supplies them; otherwise the collator falls back to a uniform
-    split of the ``Row``'s mora sequence across morphemes and inserts ``B``
-    at the mora index preceding each ``Row.accent_boundaries`` value.
-
-    Returned dict keys:
-    - ``input_ids``, ``attention_mask``
-    - ``morph_positions``, ``morph_lens``  (both ``(B, M_max)`` int64)
-    - ``morph_labels_phon``  ``(B, M_max, max_slot)`` int64, ``pad_id`` for slot pad
-    - ``morph_labels_hl``    ``(B, M_max, max_slot)`` int64
-    - ``morph_labels_apbp``  ``(B, M_max)`` int64 with ``0=O, 1=B, 2=I``
-    - ``dict_hit_mask``       ``(B, M_max)`` bool
-    - ``sample_weights``, ``ids``
-    """
-
-    _BIO_INDEX = {"O": 0, "B": 1, "I": 2}
-
-    def __init__(
-        self,
-        tokenizer: _PBTokenizerLike,
-        *,
-        pad_to_multiple_of: int | None = 8,
-        max_slot: int = 8,
-        phoneme_pad_id: int = -100,
-        hl_pad_id: int = -100,
-        apbp_pad_id: int = -100,
-    ) -> None:
-        self.tokenizer = tokenizer
-        self.pad_to_multiple_of = pad_to_multiple_of
-        self.max_slot = max_slot
-        self.phoneme_pad_id = phoneme_pad_id
-        self.hl_pad_id = hl_pad_id
-        self.apbp_pad_id = apbp_pad_id
-
-    def __call__(self, batch: list[Row]) -> dict[str, Any]:
-        _check_non_empty(batch, "PBCollator")
-        import torch
-
-        texts = [r.text for r in batch]
-        input_ids, attention_mask, extras = _encode_batch(
-            self.tokenizer,
-            texts,
-            extras_keys=(
-                "morph_positions",
-                "morph_lens",
-                "dict_hit_mask",
-                "morph_lens_in_moras",
-                "apbp",
-            ),
-        )
-
-        morph_positions_lists: list[list[int]] = [
-            list(x) for x in extras["morph_positions"]
-        ]
-        morph_lens_lists: list[list[int]] = [list(x) for x in extras["morph_lens"]]
-        dict_hit_lists: list[list[bool]] = [
-            list(x) for x in extras.get(
-                "dict_hit_mask",
-                [[False] * len(m) for m in morph_positions_lists],
-            )
-        ]
-
-        morph_lens_in_moras_all: list[list[int]] = extras.get(
-            "morph_lens_in_moras",
-            [self._infer_mora_lens(row, len(mp))
-             for row, mp in zip(batch, morph_positions_lists, strict=True)],
-        )
-        apbp_all: list[list[str]] = extras.get(
-            "apbp",
-            [self._infer_apbp(row, mora_lens)
-             for row, mora_lens in zip(batch, morph_lens_in_moras_all, strict=True)],
-        )
-
-        m_max_raw = max(len(mp) for mp in morph_positions_lists)
-        m_max = _round_up(m_max_raw, self.pad_to_multiple_of)
-
-        input_pad = int(self.tokenizer.pad_token_id)
-        input_ids_padded = _pad_1d(input_ids, input_pad, self.pad_to_multiple_of)
-        attention_mask_padded = _pad_1d(attention_mask, 0, self.pad_to_multiple_of)
-
-        morph_positions_padded = _pad_1d(morph_positions_lists, 0, self.pad_to_multiple_of)
-        morph_lens_padded = _pad_1d(morph_lens_lists, 0, self.pad_to_multiple_of)
-        dict_hit_padded = _pad_1d(
-            [[int(x) for x in row] for row in dict_hit_lists], 0, self.pad_to_multiple_of
-        )
-
-        vocab = build_default_vocab()
-
-        phon_labels_per_row: list[list[list[int]]] = []
-        hl_labels_per_row: list[list[list[int]]] = []
-        apbp_per_row: list[list[int]] = []
-        for row, mora_lens, apbp_tags in zip(
-            batch, morph_lens_in_moras_all, apbp_all, strict=True
-        ):
-            spans = _split_mora_by_morph(row, mora_lens)
-            phon_per_morph: list[list[str]] = self._segment_phonemes(row, spans)
-            hl_per_morph: list[list[str]] = self._segment_accents(row, spans)
-            phon_labels_per_row.append(
-                [self._encode_phoneme_slot(p, vocab) for p in phon_per_morph]
-            )
-            hl_labels_per_row.append(
-                [self._encode_hl_slot(h, vocab) for h in hl_per_morph]
-            )
-            apbp_per_row.append([self._BIO_INDEX.get(t, 0) for t in apbp_tags])
-
-        phon_labels_padded = _pad_2d(
-            phon_labels_per_row, self.phoneme_pad_id, self.max_slot, self.pad_to_multiple_of
-        )
-        hl_labels_padded = _pad_2d(
-            hl_labels_per_row, self.hl_pad_id, self.max_slot, self.pad_to_multiple_of
-        )
-        apbp_padded = _pad_1d(apbp_per_row, self.apbp_pad_id, self.pad_to_multiple_of)
-
-        sample_weights = [float(r.sample_weight) for r in batch]
-        ids = [r.id for r in batch]
-
-        assert len(phon_labels_padded[0]) == m_max
-        assert len(hl_labels_padded[0]) == m_max
-
-        return {
-            "input_ids": torch.tensor(input_ids_padded, dtype=torch.long),
-            "attention_mask": torch.tensor(attention_mask_padded, dtype=torch.long),
-            "morph_positions": torch.tensor(morph_positions_padded, dtype=torch.long),
-            "morph_lens": torch.tensor(morph_lens_padded, dtype=torch.long),
-            "morph_labels_phon": torch.tensor(phon_labels_padded, dtype=torch.long),
-            "morph_labels_hl": torch.tensor(hl_labels_padded, dtype=torch.long),
-            "morph_labels_apbp": torch.tensor(apbp_padded, dtype=torch.long),
-            "dict_hit_mask": torch.tensor(dict_hit_padded, dtype=torch.bool),
-            "sample_weights": torch.tensor(sample_weights, dtype=torch.float32),
-            "ids": ids,
-        }
-
-    @staticmethod
-    def _infer_mora_lens(row: Row, num_morphs: int) -> list[int]:
-        total = len(row.mora_accents)
-        if num_morphs <= 0:
-            return []
-        base, rem = divmod(total, num_morphs)
-        lens = [base + (1 if i < rem else 0) for i in range(num_morphs)]
-        return lens
-
-    @staticmethod
-    def _infer_apbp(row: Row, mora_lens: Sequence[int]) -> list[str]:
-        tags = ["O"] * len(mora_lens)
-        boundaries = {int(x) for x in row.accent_boundaries}
-        cursor = 0
-        for i, m in enumerate(mora_lens):
-            cursor += int(m)
-            if cursor in boundaries:
-                tags[i] = "B"
-        return tags
-
-    def _segment_phonemes(self, row: Row, spans: Sequence[_MoraSpan]) -> list[list[str]]:
-        phonemes = list(row.phonemes)
-        mora_accents = row.mora_accents
-        if not mora_accents:
-            return [[] for _ in spans]
-        phoneme_ranges = _phoneme_ranges_for_moras(phonemes, len(mora_accents))
-        out: list[list[str]] = []
-        for span in spans:
-            if span.end <= span.start:
-                out.append([])
-                continue
-            lo = phoneme_ranges[span.start][0] if span.start < len(phoneme_ranges) else len(phonemes)
-            hi_idx = min(span.end - 1, len(phoneme_ranges) - 1)
-            hi = phoneme_ranges[hi_idx][1] if hi_idx >= 0 else lo
-            slot = phonemes[lo:hi]
-            if len(slot) > self.max_slot:
-                slot = slot[: self.max_slot]
-            out.append(slot)
-        return out
-
-    def _segment_accents(self, row: Row, spans: Sequence[_MoraSpan]) -> list[list[str]]:
-        out: list[list[str]] = []
-        for span in spans:
-            slot = list(row.mora_accents[span.start : span.end])
-            if len(slot) > self.max_slot:
-                slot = slot[: self.max_slot]
-            out.append(slot)
-        return out
-
-    def _encode_phoneme_slot(self, phonemes: Sequence[str], vocab: Any) -> list[int]:
-        ids = [vocab.id_of(p) for p in phonemes]
-        if len(ids) > self.max_slot:
-            ids = ids[: self.max_slot]
-        ids = ids + [self.phoneme_pad_id] * (self.max_slot - len(ids))
-        return ids
-
-    def _encode_hl_slot(self, tags: Sequence[str], vocab: Any) -> list[int]:
-        # 2-class labels (0=H, 1=L) match hl_head Linear(-, 2); unknown tags → pad.
-        del vocab
-        ids = [0 if t == "H" else 1 if t == "L" else self.hl_pad_id for t in tags]
-        if len(ids) > self.max_slot:
-            ids = ids[: self.max_slot]
-        ids = ids + [self.hl_pad_id] * (self.max_slot - len(ids))
-        return ids
 
 
 class PCCollator:
@@ -810,7 +575,6 @@ def _row_to_char_slots(
 __all__ = [
     "G2PDataset",
     "PACollator",
-    "PBCollator",
     "PCCollator",
     "make_dummy_row",
 ]

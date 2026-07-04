@@ -9,7 +9,7 @@ Two public entry points, both consumed by ``modernbert_g2p.cli``:
   hyperparameters, calls :meth:`Trainer.run`, and returns the resulting
   scalar metrics dict.
 
-Pilot dispatch (``cfg.pilot in {"P-A", "P-B", "P-C"}``) selects the
+Pilot dispatch (``cfg.pilot in {"P-A", "P-C"}``) selects the
 per-pilot ``PXConfig`` dataclass, tokenizer, collator, and model builder.
 Heavy imports (``torch``, ``transformers``, ``modernbert_g2p.models.*``)
 stay lazy so ``import modernbert_g2p.training`` still costs no more than
@@ -43,10 +43,8 @@ def _is_tiny_mode() -> bool:
 
 _PILOT_ALIASES: dict[str, str] = {
     "P-A": "P-A",
-    "P-B": "P-B",
     "P-C": "P-C",
     "p_a": "P-A",
-    "p_b": "P-B",
     "p_c": "P-C",
 }
 
@@ -111,18 +109,6 @@ def _build_p_a_pipeline(cfg: Phase2Config) -> tuple[Any, Any, Any, Any]:
     return pa_cfg, tokenizer, collator, model
 
 
-def _build_p_b_pipeline(cfg: Phase2Config) -> tuple[Any, Any, Any, Any]:
-    from modernbert_g2p.models.p_b import PBConfig, build_p_b
-    from modernbert_g2p.models.tokenization import PBTokenizer
-    from modernbert_g2p.training.data import PBCollator
-
-    pb_cfg = _instantiate_config(PBConfig, cfg.model)
-    tokenizer = PBTokenizer(tokenizer_name=pb_cfg.encoder_name)
-    model = build_p_b(pb_cfg, morph_token_id=getattr(tokenizer, "morph_id", 0))
-    collator = PBCollator(tokenizer, max_slot=pb_cfg.max_mora_per_morph)
-    return pb_cfg, tokenizer, collator, model
-
-
 def _build_p_c_pipeline(cfg: Phase2Config) -> tuple[Any, Any, Any, Any]:
     from modernbert_g2p.models.p_c import PCConfig, build_p_c
     from modernbert_g2p.models.tokenization import PCTokenizer
@@ -161,7 +147,6 @@ def _dispatch_pipeline(cfg: Phase2Config) -> tuple[Any, Any, Any, Any]:
     pilot = _normalize_pilot(cfg.pilot)
     builders: dict[str, Callable[[Phase2Config], tuple[Any, Any, Any, Any]]] = {
         "P-A": _build_p_a_pipeline,
-        "P-B": _build_p_b_pipeline,
         "P-C": _build_p_c_pipeline,
     }
     return builders[pilot](cfg)

@@ -148,8 +148,8 @@ class Trainer:
     def _run_forward(self, batch: BatchLike) -> Any:
         import torch
 
-        _SKIP_KWARGS = {"ids", "sample_weights"}
-        kwargs = {k: v for k, v in batch.items() if k not in _SKIP_KWARGS}
+        skip_kwargs = {"ids", "sample_weights"}
+        kwargs = {k: v for k, v in batch.items() if k not in skip_kwargs}
         with self._autocast_context():
             outputs = self.model(**kwargs)
         if isinstance(outputs, dict):

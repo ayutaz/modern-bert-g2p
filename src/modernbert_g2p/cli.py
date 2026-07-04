@@ -15,11 +15,10 @@ import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-_PILOT_CHOICES: tuple[str, ...] = ("P-A", "P-B", "P-C")
+_PILOT_CHOICES: tuple[str, ...] = ("P-A", "P-C")
 
 _PILOT_TO_CONFIG_KEY: dict[str, str] = {
     "P-A": "p_a",
-    "P-B": "p_b",
     "P-C": "p_c",
 }
 
@@ -29,8 +28,8 @@ def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m modernbert_g2p",
         description=(
-            "ModernBERT G2P Phase 2 CLI — train / eval / compare the three "
-            "tokenizer pilots (P-A seq2seq, P-B MeCab+[MORPH], P-C char BERT)."
+            "ModernBERT G2P Phase 2 CLI — train / eval / compare the two "
+            "pure-NN tokenizer pilots (P-A seq2seq, P-C char BERT)."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
@@ -47,7 +46,7 @@ def _add_train_subparser(subparsers: argparse._SubParsersAction) -> None:
         "train",
         help="Train a single pilot end-to-end from a YAML config.",
         description=(
-            "Train a Phase 2 pilot (P-A / P-B / P-C) from a YAML config. "
+            "Train a Phase 2 pilot (P-A / P-C) from a YAML config. "
             "Use --smoke for a single-batch single-step dry run."
         ),
     )
@@ -106,7 +105,7 @@ def _add_eval_subparser(subparsers: argparse._SubParsersAction) -> None:
         "--pilot",
         choices=list(_PILOT_CHOICES),
         required=True,
-        help="Pilot family: P-A (seq2seq) / P-B (MeCab+[MORPH]) / P-C (char BERT).",
+        help="Pilot family: P-A (seq2seq) / P-C (char BERT).",
     )
     p_eval.add_argument(
         "--dataset",

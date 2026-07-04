@@ -11,7 +11,6 @@ import pytest
 from modernbert_g2p.training.data import (
     G2PDataset,
     PACollator,
-    PBCollator,
     PCCollator,
     make_dummy_row,
 )
@@ -41,62 +40,6 @@ class _FakePATokenizer:
     def encode_target(self, canonical: Any) -> list[int]:
         phon = canonical.phonemes
         return [self.bos_id] + [200 + (hash(p) % 500) for p in phon] + [self.eos_id]
-
-
-class _FakePBTokenizer:
-    """Duck-typed stand-in for T2's PBTokenizer with 3-way morph split.
-
-    Every input text is deterministically split into 3 morphemes by
-    equal-length slicing of the raw string. ``extras`` reports the
-    subword-index of each morpheme start and its subword count.
-    """
-
-    pad_token_id: int = 0
-    morph_id: int = 999
-
-    def encode(self, texts: list[str]) -> dict[str, Any]:
-        input_ids: list[list[int]] = []
-        attention_mask: list[list[int]] = []
-        morph_positions: list[list[int]] = []
-        morph_lens: list[list[int]] = []
-        dict_hit_mask: list[list[bool]] = []
-        for t in texts:
-            n = max(len(t), 3)
-            per = max(n // 3, 1)
-            positions: list[int] = []
-            lens: list[int] = []
-            cursor = 1
-            for _i in range(3):
-                positions.append(cursor)
-                lens.append(per)
-                cursor += per + 1
-            token_ids: list[int] = [500]
-            for i, m_len in enumerate(lens):
-                token_ids.extend(1000 + i * 10 + j for j in range(m_len))
-                token_ids.append(self.morph_id)
-            token_ids.append(600)
-            input_ids.append(token_ids)
-            attention_mask.append([1] * len(token_ids))
-            morph_positions.append(positions)
-            morph_lens.append(lens)
-            dict_hit_mask.append([False, True, False])
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "extras": {
-                "morph_positions": morph_positions,
-                "morph_lens": morph_lens,
-                "dict_hit_mask": dict_hit_mask,
-            },
-        }
-
-    def encode_target(
-        self,
-        morph_labels_phon: list[list[str]],
-        morph_labels_hl: list[list[str]],
-        apbp: list[str],
-    ) -> dict[str, list[int]]:
-        return {"phon": [len(x) for x in morph_labels_phon]}
 
 
 class _FakePCTokenizer:
@@ -306,36 +249,6 @@ def test_pa_collator_preserves_batch_order() -> None:
     assert out["ids"] == ids
 
 
-def test_pb_collator_produces_morph_positions() -> None:
-    torch = _torch()
-    tok = _FakePBTokenizer()
-    coll = PBCollator(tok)
-    batch = [
-        make_dummy_row(id_="p1", text="今日は良い天気"),
-        make_dummy_row(id_="p2", text="桜が咲いた"),
-    ]
-    out = coll(batch)
-    assert isinstance(out["morph_positions"], torch.Tensor)
-    assert out["morph_positions"].dtype == torch.long
-    assert out["morph_positions"].shape[0] == 2
-    assert out["morph_positions"].shape[1] % 8 == 0
-    assert out["morph_lens"].shape == out["morph_positions"].shape
-    assert out["dict_hit_mask"].dtype == torch.bool
-    assert out["morph_labels_phon"].shape == (
-        2,
-        out["morph_positions"].shape[1],
-        coll.max_slot,
-    )
-    assert out["morph_labels_hl"].shape == out["morph_labels_phon"].shape
-    assert out["morph_labels_apbp"].shape == out["morph_positions"].shape
-
-
-def test_pb_collator_empty_batch_raises() -> None:
-    _torch()
-    with pytest.raises(ValueError):
-        PBCollator(_FakePBTokenizer())([])
-
-
 def test_pc_collator_produces_slot_labels() -> None:
     torch = _torch()
     tok = _FakePCTokenizer()
@@ -472,50 +385,6 @@ def test_pa_collator_supports_encode_input_and_dict_target() -> None:
     assert out["ids"] == ["ei-a", "ei-b"]
 
 
-class _PBEncodeInputTokenizer:
-    """T2-shape P-B stand-in: single-text ``encode_input`` with top-level extras."""
-
-    pad_token_id: int = 0
-    morph_id: int = 999
-
-    def encode_input(self, text: str) -> dict[str, Any]:
-        n = max(len(text), 3)
-        per = max(n // 3, 1)
-        positions: list[int] = []
-        lens: list[int] = []
-        cursor = 1
-        for _i in range(3):
-            positions.append(cursor)
-            lens.append(per)
-            cursor += per + 1
-        token_ids: list[int] = [500]
-        for i, m_len in enumerate(lens):
-            token_ids.extend(1000 + i * 10 + j for j in range(m_len))
-            token_ids.append(self.morph_id)
-        token_ids.append(600)
-        return {
-            "input_ids": token_ids,
-            "attention_mask": [1] * len(token_ids),
-            "morph_positions": positions,
-            "morph_lens": lens,
-            "dict_hit_mask": [False, True, False],
-        }
-
-
-def test_pb_collator_supports_encode_input_top_level_extras() -> None:
-    torch = _torch()
-    tok = _PBEncodeInputTokenizer()
-    coll = PBCollator(tok)
-    batch = [
-        make_dummy_row(id_="pb-a", text="今日は良い天気"),
-        make_dummy_row(id_="pb-b", text="桜が咲いた"),
-    ]
-    out = coll(batch)
-    assert isinstance(out["morph_positions"], torch.Tensor)
-    assert out["morph_positions"].shape[0] == 2
-    assert out["morph_labels_phon"].shape[2] == coll.max_slot
-
-
 class _PCEncodeInputTokenizer:
     """T2-shape P-C stand-in: single-text ``encode_input`` with top-level char_positions."""
 
@@ -546,14 +415,6 @@ def test_pc_collator_supports_encode_input_top_level_char_positions() -> None:
     assert isinstance(out["phoneme_labels"], torch.Tensor)
     assert out["phoneme_labels"].shape[0] == 2
     assert out["phoneme_labels"].shape[2] == coll.max_slot
-
-
-def test_pb_collator_defaults_label_pad_to_ignore_index() -> None:
-    _torch()
-    coll = PBCollator(_FakePBTokenizer())
-    assert coll.phoneme_pad_id == -100
-    assert coll.hl_pad_id == -100
-    assert coll.apbp_pad_id == -100
 
 
 def test_pc_collator_defaults_label_pad_to_ignore_index() -> None:

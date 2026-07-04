@@ -16,7 +16,6 @@ from modernbert_g2p.models.canonical import (
     Vocab,
     build_default_vocab,
     p_a_to_canonical,
-    p_b_to_canonical,
     p_c_to_canonical,
 )
 
@@ -168,69 +167,6 @@ class TestPAtoCanonical:
         assert cf.mora_accents == ("H", "L")
 
 
-class TestPBtoCanonical:
-    def setup_method(self) -> None:
-        self.vocab = build_default_vocab()
-
-    def _slot(self, tokens: str) -> list[int]:
-        return [self.vocab.id_of(t) for t in tokens.split()]
-
-    def test_two_morphs_with_b_tag_inserts_boundary(self) -> None:
-        phon_slots = [self._slot("w a t a sh i"), self._slot("d e s u")]
-        hl_slots = [["L", "H", "H"], ["L", "L"]]
-        apbp = ["O", "B"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, self.vocab)
-        assert cf.phonemes == ("w", "a", "t", "a", "sh", "i", "d", "e", "s", "u")
-        assert cf.mora_accents == ("L", "H", "H", "L", "L")
-        assert cf.accent_boundaries == (3,)
-
-    def test_pad_slots_stripped(self) -> None:
-        phon_slots = [self._slot("k a") + [self.vocab.pad_id, self.vocab.pad_id]]
-        hl_slots = [["L", "H", self.vocab.PAD_TOKEN, self.vocab.PAD_TOKEN]]
-        apbp = ["O"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, self.vocab)
-        assert cf.phonemes == ("k", "a")
-        assert cf.mora_accents == ("L", "H")
-        assert cf.accent_boundaries == ()
-
-    def test_all_o_produces_no_boundary(self) -> None:
-        phon_slots = [self._slot("a"), self._slot("i"), self._slot("u")]
-        hl_slots = [["H"], ["L"], ["H"]]
-        apbp = ["O", "O", "O"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, self.vocab)
-        assert cf.accent_boundaries == ()
-        assert cf.mora_accents == ("H", "L", "H")
-
-    def test_b_on_first_morph_ignored(self) -> None:
-        phon_slots = [self._slot("a"), self._slot("i")]
-        hl_slots = [["H"], ["L"]]
-        apbp = ["B", "O"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, self.vocab)
-        assert cf.accent_boundaries == ()
-
-    def test_multi_morph_multiple_boundaries(self) -> None:
-        phon_slots = [
-            self._slot("a"),
-            self._slot("k a"),
-            self._slot("s a"),
-            self._slot("t a"),
-        ]
-        hl_slots = [["H"], ["L"], ["H"], ["L"]]
-        apbp = ["O", "B", "O", "B"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, self.vocab)
-        assert cf.accent_boundaries == (1, 3)
-        assert cf.phonemes == ("a", "k", "a", "s", "a", "t", "a")
-        assert cf.mora_accents == ("H", "L", "H", "L")
-
-    def test_empty_input(self) -> None:
-        cf = p_b_to_canonical([], [], [], self.vocab)
-        assert cf == CanonicalForm((), (), ())
-
-    def test_zip_strict_mismatched_raises(self) -> None:
-        with pytest.raises(ValueError):
-            p_b_to_canonical([[]], [["H"], ["L"]], ["O"], self.vocab)
-
-
 class TestPCtoCanonical:
     def setup_method(self) -> None:
         self.vocab = build_default_vocab()
@@ -340,19 +276,6 @@ class TestPauseTokenInvariants:
         assert cf.phonemes == ("a", "k", "a")
         assert cf.mora_accents == ("H", "L")
         assert cf.accent_boundaries == (1,)
-
-    def test_p_b_strips_pau_from_phon_slots(self) -> None:
-        vocab = Vocab(phoneme_tokens=("k", "a", PAUSE_TOKEN))
-        pau_id = vocab.id_of(PAUSE_TOKEN)
-        phon_slots = [
-            [vocab.id_of("k"), vocab.id_of("a"), pau_id],
-            [pau_id, vocab.id_of("k"), vocab.id_of("a")],
-        ]
-        hl_slots = [["L", "H"], ["L", "H"]]
-        apbp = ["O", "O"]
-        cf = p_b_to_canonical(phon_slots, hl_slots, apbp, vocab)
-        assert cf.phonemes == ("k", "a", "k", "a")
-        assert cf.mora_accents == ("L", "H", "L", "H")
 
     def test_p_c_strips_pau_from_phon_slots(self) -> None:
         vocab = Vocab(phoneme_tokens=("k", "a", PAUSE_TOKEN))

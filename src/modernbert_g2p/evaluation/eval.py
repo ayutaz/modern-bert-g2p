@@ -49,7 +49,7 @@ PredictionFn = Callable[[str], Any]
 MetricFn = Callable[[Any, Any], dict[str, float | int]]
 RefExtractor = Callable[[Row], Any]
 
-_VALID_PILOTS: frozenset[str] = frozenset({"p_a", "p_b", "p_c"})
+_VALID_PILOTS: frozenset[str] = frozenset({"p_a", "p_c"})
 _VALID_DATASETS: frozenset[str] = frozenset({"jsut", "jvs", "rohan", "hardset"})
 
 
@@ -202,28 +202,6 @@ def run_eval_p_a(
 ) -> dict[str, Any]:
     """Pilot P-A (seq2seq) wrapper around :func:`run_eval`."""
     fn = _pilot_prediction_fn(prediction_fn, model, tokenizer, canonicalize_fn, "p_a")
-    return run_eval(
-        gold_dataset,
-        fn,
-        metric_fn,
-        ref_extractor=ref_extractor,
-        include_bootstrap=include_bootstrap,
-    )
-
-
-def run_eval_p_b(
-    gold_dataset: Iterable[Row],
-    prediction_fn: PredictionFn | None = None,
-    metric_fn: MetricFn = compute_per,
-    *,
-    model: Any = None,
-    tokenizer: Any = None,
-    canonicalize_fn: Callable[..., Any] | None = None,
-    ref_extractor: RefExtractor | None = None,
-    include_bootstrap: bool = True,
-) -> dict[str, Any]:
-    """Pilot P-B (MeCab + [MORPH] + ModernBERT) wrapper around :func:`run_eval`."""
-    fn = _pilot_prediction_fn(prediction_fn, model, tokenizer, canonicalize_fn, "p_b")
     return run_eval(
         gold_dataset,
         fn,
@@ -610,7 +588,7 @@ def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
         tokenizer_name=pc_config.encoder_name,
         phoneme_vocab=vocab,
     )
-    _BIO = ("B", "I", "O")
+    bio_labels = ("B", "I", "O")
 
     def predict(text: str):
         with torch.no_grad():
@@ -634,7 +612,7 @@ def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
             phon_slots.append(list(phon_ids[i]) if isinstance(phon_ids[i], list) else [phon_ids[i]])
             hl_row = hl_ids[i] if isinstance(hl_ids[i], list) else [hl_ids[i]]
             hl_slots.append(["H" if x == 0 else "L" for x in hl_row])
-            bio_tags.append(_BIO[apbp_ids[i]] if apbp_ids[i] < len(_BIO) else "O")
+            bio_tags.append(bio_labels[apbp_ids[i]] if apbp_ids[i] < len(bio_labels) else "O")
         return p_c_to_canonical(phon_slots, hl_slots, bio_tags, vocab)
 
     del batch_size
@@ -659,7 +637,7 @@ def evaluate_checkpoint(
         cfg: A :class:`~modernbert_g2p.config.Phase2Config` (or duck-typed
             equivalent) with ``.data.jsut_yaml`` / ``.data.jvs_dir`` /
             ``.data.rohan_txt`` / ``.data.hard_set_path`` set.
-        pilot: One of ``"p_a"``, ``"p_b"``, ``"p_c"``.
+        pilot: One of ``"p_a"``, ``"p_c"``.
         checkpoint: Path to a checkpoint saved by
             :meth:`~modernbert_g2p.training.Trainer.save_checkpoint`.
         dataset: One of ``"jsut"``, ``"jvs"``, ``"rohan"``, ``"hardset"``.
@@ -840,7 +818,6 @@ __all__ = [
     "evaluate_checkpoint",
     "run_eval",
     "run_eval_p_a",
-    "run_eval_p_b",
     "run_eval_p_c",
     "score_hardset",
     "score_jsut",

@@ -3,7 +3,7 @@
 All three tokenizers expose the following methods:
 
 - :meth:`BaseTokenizer.encode_input`: text → ``input_ids`` / ``attention_mask``
-  plus any pilot-specific side channels (e.g. ``morph_positions`` for P-B).
+  plus any pilot-specific side channels (e.g. ``char_positions`` for P-C).
 - :meth:`BaseTokenizer.encode`: ``list[str]`` → batched dict shaped
   ``{"input_ids", "attention_mask", "extras": {...}}`` for the T6 collators.
 - :meth:`BaseTokenizer.encode_target`: :class:`CanonicalForm` → per-pilot
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 BIO_LABEL_TO_ID: dict[str, int] = {"O": 0, "B": 1, "I": 2}
-"""Fixed integer mapping used by both P-B and P-C for APBP BIO labels."""
+"""Fixed integer mapping used by P-C for APBP BIO labels."""
 
 
 ID_TO_BIO_LABEL: dict[int, str] = {v: k for k, v in BIO_LABEL_TO_ID.items()}
@@ -63,8 +63,7 @@ class BaseTokenizer(Protocol):
 
         Returns a dict with at least ``input_ids`` / ``attention_mask``
         (``list[list[int]]``) plus a per-pilot ``extras`` sub-dict that carries
-        any auxiliary tensors (e.g. ``morph_positions`` for P-B,
-        ``char_positions`` for P-C).
+        any auxiliary tensors (e.g. ``char_positions`` for P-C).
         """
 
     def encode_target(
@@ -74,7 +73,7 @@ class BaseTokenizer(Protocol):
 
         The return type varies per pilot: P-A yields a raw ``list[int]``
         (``<bos>`` prepended, ``<eos>`` appended) for the seq2seq decoder;
-        P-B and P-C yield an :class:`EncodedTarget` dict.
+        P-C yields an :class:`EncodedTarget` dict.
         """
 
     def decode_output(self, ids: Sequence[int]) -> str:

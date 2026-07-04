@@ -454,7 +454,6 @@ def test_factory_normalizes_pilot_alias() -> None:
 
     assert _normalize_pilot("P-A") == "P-A"
     assert _normalize_pilot("p_a") == "P-A"
-    assert _normalize_pilot("p_b") == "P-B"
     assert _normalize_pilot("p_c") == "P-C"
     with pytest.raises(ValueError, match="Unknown pilot"):
         _normalize_pilot("P-D")

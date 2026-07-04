@@ -1,8 +1,8 @@
 """Phase 2 configuration dataclasses and YAML loader.
 
-Loads pilot-specific YAML files (``configs/p_a.yaml`` / ``p_b.yaml`` / ``p_c.yaml``)
+Loads pilot-specific YAML files (``configs/p_a.yaml`` / ``p_c.yaml``)
 into strongly-typed ``Phase2Config`` objects. ``model`` remains an untyped mapping
-here so this module does not depend on the pilot-specific ``PAConfig`` / ``PBConfig``
+here so this module does not depend on the pilot-specific ``PAConfig``
 / ``PCConfig`` dataclasses (validated downstream by each pilot's factory).
 """
 
@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-VALID_PILOTS: frozenset[str] = frozenset({"P-A", "P-B", "P-C"})
+VALID_PILOTS: frozenset[str] = frozenset({"P-A", "P-C"})
 VALID_PRECISIONS: frozenset[str] = frozenset({"bf16", "fp16", "fp32"})
 
 

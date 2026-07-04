@@ -6,6 +6,16 @@
 
 ---
 
+## Status update (2026-07-04 v2.0 pivot)
+
+**この設計書は v2.0 Pure-NN Research Pivot 以前 (3 pilot 前提) に書かれた。以下の変更を上位ドキュメントで確定済み**:
+
+- **P-B (MeCab pretokenize + `[MORPH]`) pilot は drop**。パイロットは **P-A (seq2seq) / P-C (char-level BERT) の 2 本** に縮小した。
+- **理由**: MeCab は rule-based であり、学習時の pre-tokenize であっても pure-NN 原則 (推論経路に rule/dict を含めない) の純度検証で除外リスクが高い。加えて `docs/research/09_pure_nn_g2p_benchmarks.md §9.3` は pre-tokenizer としての MeCab 実行を「禁止 (char-level or subword-only に統一)」と規定しており、P-B はこの方針と両立しない。pivot の rationale は `CLAUDE.md` (v2.0, 設計原則 4 / 方針転換履歴) を参照。
+- **本書の扱い**: 全面書き換えはせず historical context として保持する。**§3.2 (P-B section) は DROPPED**。以降の §4〜§14 に現れる「3 pilot」「P-B」への言及は歴史的記述であり、active な計画は P-A/P-C の 2 pilot のみと読み替えること。exit criteria (§8) / 決定ルール (§5) / compute 予算 (§7) も 2 pilot ベースに縮小される (P-B 分の GPU-h 106 を除いた ~273 GPU-h が新しい Phase 2 見積り)。
+
+---
+
 ## 1. Executive summary
 
 Phase 2 の中核判断は「G2P タスクをどのトークン粒度で解くか」である。SB Intuitions 自身が modernbert-ja HF カードで警告する「SentencePiece boundary が morpheme と一致せず token classification 性能が悪い」問題を回避するため、**seq2seq (P-A) / MeCab pretokenize + `[MORPH]` boundary token 挿入 (P-B) / char-level BERT (P-C)** の 3 パイロットを同一データ・同一 split・複数 seed で head-to-head 比較する。決定は N=3 seed 上の bootstrap CI 付き JSUT PER + hard-set per-category + multi-head 適合性スコアカードで多段判定する。exit 基準は「pure-NN で haqumei を上回る」ではなく (`docs/research/07_nn_only_benchmarks.md` の失敗パターンから明確に非現実的)、「haqumei との gap を 50% 以上閉じるか、既存 pyopenjtalk-plus 辞書 fallback を merge した hybrid で haqumei を絶対値で下回る」の 2 択とする。Winner 1 pilot が Phase 3 の multi-task 拡張のメインラインに昇格、残る 2 pilot は再現可能な recipe を残して archive する。
@@ -74,6 +84,8 @@ raw text
 **Inference**: beam=4, coverage penalty 0.2, length norm α=0.6。
 
 ### 3.2 P-B: MeCab pretokenize + `[MORPH]` boundary token 挿入 + ModernBERT + token classification
+
+> **DROPPED (v2.0 pivot, 2026-07-04) — retained for historical context only**。MeCab 依存が pure-NN 原則に反するため P-B は Phase 2 パイロットから除外された (詳細は本書冒頭の Status update 節、および `CLAUDE.md` v2.0 / `docs/research/09 §9.3` を参照)。以下の設計記述は実行されない。
 
 **動機**: Hida ICASSP 2022 の multi-head 構造に最も近い。ただし critique §3 で指摘された通り、単に MeCab pretokenize + subword mean-pool しても encoder 内部は SentencePiece のまま attend するため、SB Intuitions 警告に対する mitigation として **不十分**。本設計では **形態素境界を明示的な学習可能特殊 token `[MORPH]` として SP 列に挿入**し、encoder 内 self-attention に境界情報を注入する路線を採用する。
 

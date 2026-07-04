@@ -9,8 +9,8 @@ Public surface:
   (percentile method) matching ``scipy.stats.bootstrap(method="percentile")``
   on a fixed seed.
 - :func:`run_eval` — generic loop over Phase 1 :class:`Row` items.
-- :func:`run_eval_p_a`, :func:`run_eval_p_b`, :func:`run_eval_p_c` — pilot-
-  specific wrappers around ``run_eval``.
+- :func:`run_eval_p_a`, :func:`run_eval_p_c` — pilot-specific wrappers
+  around ``run_eval``.
 - :func:`score_jsut`, :func:`score_jvs`, :func:`score_rohan`,
   :func:`score_hardset` — dataset-specific readers wired to the canonical
   metrics (PER / CER / KER).
@@ -26,7 +26,6 @@ from modernbert_g2p.evaluation.eval import (
     evaluate_checkpoint,
     run_eval,
     run_eval_p_a,
-    run_eval_p_b,
     run_eval_p_c,
     score_hardset,
     score_jsut,
@@ -41,7 +40,6 @@ __all__ = [
     "evaluate_checkpoint",
     "run_eval",
     "run_eval_p_a",
-    "run_eval_p_b",
     "run_eval_p_c",
     "score_hardset",
     "score_jsut",

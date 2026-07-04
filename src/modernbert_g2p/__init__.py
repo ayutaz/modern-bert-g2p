@@ -6,7 +6,7 @@ Public API surface:
 - :mod:`modernbert_g2p.data` — Phase 1 data pipeline (Row schema, source
   ingestors, contamination filters, Parquet + manifest writer).
 - :mod:`modernbert_g2p.models` — Phase 2 pilot models
-  (P-A seq2seq, P-B MeCab+[MORPH], P-C char BERT).
+  (P-A seq2seq, P-C char BERT).
 - :mod:`modernbert_g2p.training` — Trainer / collators / loss / optimizer.
 - :mod:`modernbert_g2p.evaluation` — bootstrap CI + dataset-specific scorers.
 - :func:`load_config` — YAML → :class:`Phase2Config` loader.

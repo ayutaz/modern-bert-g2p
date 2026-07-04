@@ -16,7 +16,6 @@ from modernbert_g2p.evaluation import (
     evaluate_checkpoint,
     run_eval,
     run_eval_p_a,
-    run_eval_p_b,
     run_eval_p_c,
     score_hardset,
     score_jsut,
@@ -282,15 +281,13 @@ def test_run_eval_p_a_matches_run_eval() -> None:
     assert result_a["aggregate"] == result_generic["aggregate"]
 
 
-def test_run_eval_p_b_and_p_c_delegate() -> None:
+def test_run_eval_p_c_delegates() -> None:
     gold = _tiny_gold()
 
     def prediction_fn(text: str) -> tuple[str, ...]:
         return ("x",)
 
-    result_b = run_eval_p_b(gold, prediction_fn, include_bootstrap=False)
     result_c = run_eval_p_c(gold, prediction_fn, include_bootstrap=False)
-    assert result_b["aggregate"]["n_rows"] == 3
     assert result_c["aggregate"]["n_rows"] == 3
 
 
@@ -390,7 +387,7 @@ def test_evaluate_checkpoint_jvs_uses_cer(tmp_path: Path) -> None:
 
     result = evaluate_checkpoint(
         cfg,
-        pilot="p_b",
+        pilot="p_a",
         checkpoint=ckpt,
         dataset="jvs",
         prediction_fn=prediction_fn,
@@ -399,6 +396,19 @@ def test_evaluate_checkpoint_jvs_uses_cer(tmp_path: Path) -> None:
     expected = compute_cer("ABC", "ミズヲカウ")
     assert result["per_row"][0]["s"] == expected["s"]
     assert result["dataset"] == "jvs"
+
+
+def test_evaluate_checkpoint_p_b_pilot_raises(tmp_path: Path) -> None:
+    ckpt = _dummy_checkpoint(tmp_path)
+    cfg = _StubCfg(data=_StubData(jsut_yaml=str(_JSUT_FIXTURE)))
+    with pytest.raises(ValueError, match="pilot"):
+        evaluate_checkpoint(
+            cfg,
+            pilot="p_b",
+            checkpoint=ckpt,
+            dataset="jsut",
+            prediction_fn=lambda text: (),
+        )
 
 
 def test_evaluate_checkpoint_rohan_uses_ker(tmp_path: Path) -> None:
@@ -536,7 +546,7 @@ def _write_eval_json(
 
 
 def test_build_comparison_table_reads_per_pilot_dirs(tmp_path: Path) -> None:
-    for pilot in ("p_a", "p_b", "p_c"):
+    for pilot in ("p_a", "p_c"):
         d = tmp_path / pilot
         _write_eval_json(
             d / "eval_jsut.json",
@@ -552,11 +562,10 @@ def test_build_comparison_table_reads_per_pilot_dirs(tmp_path: Path) -> None:
             per_micro=1.10,
         )
 
-    dirs = [tmp_path / p for p in ("p_a", "p_b", "p_c")]
+    dirs = [tmp_path / p for p in ("p_a", "p_c")]
     table = build_comparison_table(dirs)
     assert "| Pilot |" in table
     assert "P-A" in table
-    assert "P-B" in table
     assert "P-C" in table
     assert "jsut" in table
     assert "jvs" in table
@@ -575,10 +584,10 @@ def test_build_comparison_table_skips_missing_dirs(tmp_path: Path) -> None:
         dataset="jsut",
         per_micro=0.5,
     )
-    missing = tmp_path / "p_b_missing"
+    missing = tmp_path / "p_c_missing"
     table = build_comparison_table([existing, missing])
     assert "P-A" in table
-    assert "P-B" not in table
+    assert "P-C" not in table
 
 
 def test_build_comparison_table_empty_dirs_returns_header_only(tmp_path: Path) -> None:

@@ -7,7 +7,6 @@ __all__ = [
     "G2PDataset",
     "LabelSmoothingCELoss",
     "PACollator",
-    "PBCollator",
     "PCCollator",
     "Trainer",
     "TrainingArgs",
@@ -32,7 +31,7 @@ def __getattr__(name: str) -> object:
         from modernbert_g2p.training.trainer import Trainer, TrainingArgs
 
         return {"Trainer": Trainer, "TrainingArgs": TrainingArgs}[name]
-    if name in {"G2PDataset", "PACollator", "PBCollator", "PCCollator", "make_dummy_row"}:
+    if name in {"G2PDataset", "PACollator", "PCCollator", "make_dummy_row"}:
         from modernbert_g2p.training import data as _data
 
         return getattr(_data, name)

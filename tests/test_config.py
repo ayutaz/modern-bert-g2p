@@ -25,7 +25,6 @@ CONFIG_DIR = REPO_ROOT / "configs"
     ("yaml_name", "expected_pilot", "expected_encoder_lr", "expected_total_steps"),
     [
         ("p_a.yaml", "P-A", 3.0e-5, 60_000),
-        ("p_b.yaml", "P-B", 5.0e-5, 45_000),
         ("p_c.yaml", "P-C", 5.0e-5, 40_000),
     ],
 )
@@ -61,22 +60,6 @@ def test_p_a_yaml_hyperparameters_match_design_doc() -> None:
     assert cfg.training.head_lr == pytest.approx(1.0e-4)
     assert cfg.training.warmup_steps == 2000
     assert cfg.training.total_steps == 60_000
-
-
-def test_p_b_yaml_hyperparameters_match_design_doc() -> None:
-    cfg = load_config(CONFIG_DIR / "p_b.yaml")
-
-    assert cfg.model["encoder_name"] == "sbintuitions/modernbert-ja-130m"
-    assert cfg.model["head_variant"] == "B1"
-    assert cfg.model["max_mora_per_morph"] == 8
-    assert cfg.model["phoneme_vocab_size"] == 68
-    assert cfg.model["apbp_alpha"] == pytest.approx(0.2)
-    assert cfg.model["dict_hit_weight"] == pytest.approx(0.3)
-    assert cfg.model["label_smoothing"] == pytest.approx(0.05)
-    assert cfg.training.encoder_lr == pytest.approx(5.0e-5)
-    assert cfg.training.head_lr == pytest.approx(3.0e-4)
-    assert cfg.training.warmup_steps == 1500
-    assert cfg.training.total_steps == 45_000
 
 
 def test_p_c_yaml_hyperparameters_match_design_doc() -> None:
@@ -237,7 +220,7 @@ def test_determinism_load_twice_returns_equal_configs() -> None:
     assert a.model == b.model
 
 
-@pytest.mark.parametrize("yaml_name", ["p_a.yaml", "p_b.yaml", "p_c.yaml"])
+@pytest.mark.parametrize("yaml_name", ["p_a.yaml", "p_c.yaml"])
 def test_yaml_roundtrip_via_dict_is_consistent(yaml_name: str, tmp_path: Path) -> None:
     cfg = load_config(CONFIG_DIR / yaml_name)
     dumped = tmp_path / yaml_name
@@ -256,22 +239,22 @@ def test_output_dir_default_and_override() -> None:
 
 
 def test_config_to_dict_produces_yaml_safe_structure() -> None:
-    cfg = load_config(CONFIG_DIR / "p_b.yaml")
+    cfg = load_config(CONFIG_DIR / "p_c.yaml")
     d = config_to_dict(cfg)
 
-    assert d["pilot"] == "P-B"
+    assert d["pilot"] == "P-C"
     assert isinstance(d["data"], dict)
     assert isinstance(d["training"], dict)
     assert d["training"]["encoder_lr"] == pytest.approx(5.0e-5)
     rendered = yaml.safe_dump(d)
-    assert "P-B" in rendered
+    assert "P-C" in rendered
 
 
 def test_frozen_dataclasses_reject_mutation() -> None:
     cfg = load_config(CONFIG_DIR / "p_a.yaml")
 
     with pytest.raises((AttributeError, TypeError)):
-        cfg.pilot = "P-B"  # type: ignore[misc]
+        cfg.pilot = "P-C"  # type: ignore[misc]
     with pytest.raises((AttributeError, TypeError)):
         cfg.training.encoder_lr = 1.0  # type: ignore[misc]
 
@@ -280,7 +263,6 @@ def test_frozen_dataclasses_reject_mutation() -> None:
     ("yaml_name", "pilot_config_path", "pilot_config_name"),
     [
         ("p_a.yaml", "modernbert_g2p.models.p_a.config", "PAConfig"),
-        ("p_b.yaml", "modernbert_g2p.models.p_b.config", "PBConfig"),
         ("p_c.yaml", "modernbert_g2p.models.p_c.config", "PCConfig"),
     ],
 )
@@ -320,7 +302,7 @@ def test_training_label_smoothing_field_removed() -> None:
     training_field_names = {f.name for f in dc_fields(cfg.training)}
     assert "label_smoothing" not in training_field_names, (
         "training.label_smoothing was dead code (models pull label_smoothing from "
-        "their own PAConfig/PBConfig/PCConfig). It must not be re-introduced."
+        "their own PAConfig/PCConfig). It must not be re-introduced."
     )
 
 

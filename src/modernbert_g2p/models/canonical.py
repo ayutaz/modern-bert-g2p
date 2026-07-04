@@ -1,6 +1,6 @@
 """Canonical vocab + per-pilot output-to-canonical conversion.
 
-All three Phase 2 pilots (P-A seq2seq / P-B MeCab+[MORPH] / P-C char-BERT) emit
+Both Phase 2 pilots (P-A seq2seq / P-C char-BERT) emit
 model-specific output shapes but must be projected onto a single canonical
 representation before PER/CER/KER scoring so that comparisons are fair.
 
@@ -177,43 +177,6 @@ def p_a_to_canonical(token_ids: Sequence[int], vocab: Vocab) -> CanonicalForm:
     )
 
 
-def p_b_to_canonical(
-    per_morph_phon_ids: Sequence[Sequence[int]],
-    per_morph_hl: Sequence[Sequence[str]],
-    apbp_bio: Sequence[str],
-    vocab: Vocab,
-) -> CanonicalForm:
-    """Convert P-B per-morpheme head output into a :class:`CanonicalForm`.
-
-    Boundary rule: ``apbp_bio[i] == "B"`` at morph ``i`` (with ``i > 0``)
-    inserts a ``/`` at the mora index reached just before morph ``i``.
-    Phoneme slots equal to ``vocab.PAD_TOKEN``, structural specials, ``<unk>``,
-    and the pause marker ``pau`` are dropped from the phoneme stream.
-    """
-    phonemes: list[str] = []
-    mora_accents: list[str] = []
-    accent_boundaries: list[int] = []
-    for morph_idx, (phon_slots, hl_slots, apbp_tag) in enumerate(
-        zip(per_morph_phon_ids, per_morph_hl, apbp_bio, strict=True)
-    ):
-        if apbp_tag == "B" and morph_idx > 0:
-            accent_boundaries.append(len(mora_accents))
-        for ph_id in phon_slots:
-            s = vocab.token_of(ph_id)
-            if s == vocab.PAD_TOKEN or _is_droppable(s, vocab.UNK_TOKEN):
-                continue
-            phonemes.append(s)
-        for hl in hl_slots:
-            if hl == vocab.PAD_TOKEN or hl == "":
-                continue
-            mora_accents.append(hl)
-    return CanonicalForm(
-        phonemes=tuple(phonemes),
-        mora_accents=tuple(mora_accents),
-        accent_boundaries=tuple(accent_boundaries),
-    )
-
-
 def p_c_to_canonical(
     per_char_phon_ids: Sequence[Sequence[int]],
     per_char_hl: Sequence[Sequence[str]],
@@ -222,9 +185,10 @@ def p_c_to_canonical(
 ) -> CanonicalForm:
     """Convert P-C per-character fixed-slot output into a :class:`CanonicalForm`.
 
-    Same aggregation as :func:`p_b_to_canonical` but the outer axis is
-    per-character rather than per-morpheme. Structural specials, ``<unk>``,
-    and the pause marker ``pau`` are dropped from the phoneme stream.
+    ``apbp_bio[i] == "B"`` at char ``i`` (with ``i > 0``) inserts a ``/`` at
+    the mora index reached just before char ``i``. Phoneme slots equal to
+    ``vocab.PAD_TOKEN``, structural specials, ``<unk>``, and the pause marker
+    ``pau`` are dropped from the phoneme stream.
     """
     phonemes: list[str] = []
     mora_accents: list[str] = []
