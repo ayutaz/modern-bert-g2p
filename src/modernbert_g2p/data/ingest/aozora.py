@@ -95,30 +95,31 @@ class AozoraSource:
             pairs = extract_ruby_pairs_aozora(body)
             if not pairs:
                 continue
-            text = "".join(surface for surface, _ in pairs)
-            kana = "".join(reading for _, reading in pairs)
-            try:
-                phonemes = kana_to_julius_phonemes(kana)
-            except ValueError:
-                continue
-            if not phonemes:
-                continue
-            yield Row(
-                id=make_id("aozora", text, phonemes),
-                source="aozora",
-                source_license=license_tag,
-                text=text,
-                phonemes=phonemes,
-                mora_accents=(),
-                accent_boundaries=(),
-                sample_weight=weight_for("general"),
-                extra={
-                    "file": f.name,
-                    "file_license": license_tag,
-                    "ruby_count": len(pairs),
-                },
-            )
-            emitted += 1
+            for surface, reading in pairs:
+                if limit is not None and emitted >= limit:
+                    return
+                try:
+                    phonemes = kana_to_julius_phonemes(reading)
+                except ValueError:
+                    continue
+                if not phonemes:
+                    continue
+                yield Row(
+                    id=make_id("aozora", surface, phonemes),
+                    source="aozora",
+                    source_license=license_tag,
+                    text=surface,
+                    phonemes=phonemes,
+                    mora_accents=(),
+                    accent_boundaries=(),
+                    sample_weight=weight_for("general"),
+                    extra={
+                        "file": f.name,
+                        "file_license": license_tag,
+                        "rt_text": reading,
+                    },
+                )
+                emitted += 1
 
 
 __all__ = [

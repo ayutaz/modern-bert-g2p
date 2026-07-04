@@ -24,26 +24,29 @@ def test_source_license_base_is_pdplusaoz():
     assert AozoraSource.source_license in KNOWN_LICENSES
 
 
-def test_entries_yields_row_for_fixture_file():
+def test_entries_yields_one_row_per_ruby_pair_for_fixture_file():
     rows = list(AozoraSource().entries(FIXTURE_FILE))
-    assert len(rows) == 1
-    row = rows[0]
-    assert row.source == "aozora"
-    assert row.text == "桜花咲春風"
-    assert row.phonemes == ("s", "a", "k", "u", "r", "a", "h", "a", "n", "a",
-                            "s", "a", "h", "a", "r", "u", "k", "a", "z", "e")
-    assert row.extra["ruby_count"] == 5
-    assert row.extra["file"] == "aozora_sample.html"
-    validate_row(row)
+    assert len(rows) == 5
+    surfaces = [r.text for r in rows]
+    readings = [r.extra["rt_text"] for r in rows]
+    assert surfaces == ["桜", "花", "咲", "春", "風"]
+    assert readings == ["さくら", "はな", "さ", "はる", "かぜ"]
+    for row in rows:
+        assert row.source == "aozora"
+        assert row.extra["file"] == "aozora_sample.html"
+        validate_row(row)
+    assert rows[0].phonemes == ("s", "a", "k", "u", "r", "a")
+    assert rows[1].phonemes == ("h", "a", "n", "a")
 
 
 def test_entries_sets_sample_weight_from_weighting_policy():
     from modernbert_g2p.data.weighting import weight_for
 
     rows = list(AozoraSource().entries(FIXTURE_FILE))
-    assert len(rows) == 1
-    assert rows[0].category == "general"
-    assert rows[0].sample_weight == weight_for("general")
+    assert len(rows) >= 1
+    for r in rows:
+        assert r.category == "general"
+        assert r.sample_weight == weight_for("general")
 
 
 def test_rp_parens_stripped_from_ruby_extraction():
