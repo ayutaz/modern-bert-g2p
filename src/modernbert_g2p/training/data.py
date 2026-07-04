@@ -586,7 +586,9 @@ class PBCollator:
         return ids
 
     def _encode_hl_slot(self, tags: Sequence[str], vocab: Any) -> list[int]:
-        ids = [vocab.id_of(t) for t in tags]
+        # 2-class labels (0=H, 1=L) match hl_head Linear(-, 2); unknown tags → pad.
+        del vocab
+        ids = [0 if t == "H" else 1 if t == "L" else self.hl_pad_id for t in tags]
         if len(ids) > self.max_slot:
             ids = ids[: self.max_slot]
         ids = ids + [self.hl_pad_id] * (self.max_slot - len(ids))
@@ -689,7 +691,7 @@ class PCCollator:
                 )
                 hl_labels_row[tok_idx] = self._pad_slot(
                     [
-                        vocab.id_of(h) if h != "<pad>" else self.hl_pad_id
+                        0 if h == "H" else 1 if h == "L" else self.hl_pad_id
                         for h in char_hl_slots[char_idx]
                     ],
                     self.hl_pad_id,
