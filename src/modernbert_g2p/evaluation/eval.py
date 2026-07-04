@@ -570,18 +570,75 @@ def _build_prediction_fn_from_checkpoint(
     checkpoint: Path,
     batch_size: int,
 ) -> PredictionFn:
-    """Placeholder inference builder (real wiring lands with Track 3/4/5).
-
-    Raises :class:`NotImplementedError` with a clear message pointing callers
-    at the ``prediction_fn`` keyword injection path used by tests and
-    integration harnesses.
-    """
+    """Load a saved checkpoint and return a text -> CanonicalForm callable."""
+    if pilot == "p_c":
+        return _build_pc_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
     raise NotImplementedError(
         f"evaluate_checkpoint: automatic model loading for pilot={pilot!r} "
-        f"from checkpoint={checkpoint} is not yet wired. "
-        "Pass a `prediction_fn` keyword to bypass model construction, or wait "
-        "for the pilot-specific inference adapter to land."
+        f"from checkpoint={checkpoint} is not yet wired. Currently implemented: p_c. "
+        "Pass a `prediction_fn` keyword to bypass model construction."
     )
+
+
+def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> PredictionFn:
+    import torch
+
+    from modernbert_g2p.models.canonical import Vocab, build_default_vocab, p_c_to_canonical
+    from modernbert_g2p.models.p_c.config import PCConfig
+    from modernbert_g2p.models.p_c.model import build_p_c
+    from modernbert_g2p.models.tokenization.p_c_tokenizer import PCTokenizer
+
+    model_cfg = cfg.model if hasattr(cfg, "model") else {}
+    if not isinstance(model_cfg, dict):
+        model_cfg = {}
+    pc_config = PCConfig(
+        encoder_name=model_cfg.get("encoder_name", "tohoku-nlp/bert-base-japanese-char-v2"),
+        head_variant=model_cfg.get("head_variant", "C1"),
+        max_slot=int(model_cfg.get("max_slot", 8)),
+        phoneme_vocab_size=int(model_cfg.get("phoneme_vocab_size", 68)),
+        apbp_alpha=float(model_cfg.get("apbp_alpha", 0.2)),
+        label_smoothing=float(model_cfg.get("label_smoothing", 0.05)),
+    )
+    model = build_p_c(pc_config)
+    state = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    sd = state.get("model") if isinstance(state, dict) and "model" in state else state
+    model.load_state_dict(sd, strict=False)
+    model.eval()
+
+    vocab: Vocab = build_default_vocab()
+    tokenizer = PCTokenizer(
+        tokenizer_name=pc_config.encoder_name,
+        phoneme_vocab=vocab,
+    )
+    _BIO = ("B", "I", "O")
+
+    def predict(text: str):
+        with torch.no_grad():
+            enc = tokenizer.encode([text])
+            input_ids = torch.tensor(enc["input_ids"], dtype=torch.long)
+            attn = torch.tensor(enc["attention_mask"], dtype=torch.long)
+            out = model(input_ids=input_ids, attention_mask=attn)
+            phon_logits = out["phoneme_logits"] if "phoneme_logits" in out else out["phon_logits"]
+            hl_logits = out["hl_logits"]
+            apbp_logits = out["apbp_logits"]
+            phon_ids = phon_logits.argmax(dim=-1)[0].tolist()
+            hl_ids = hl_logits.argmax(dim=-1)[0].tolist()
+            apbp_ids = apbp_logits.argmax(dim=-1)[0].tolist()
+            mask = attn[0].bool().tolist()
+        phon_slots: list[list[int]] = []
+        hl_slots: list[list[str]] = []
+        bio_tags: list[str] = []
+        for i, m in enumerate(mask):
+            if not m:
+                continue
+            phon_slots.append(list(phon_ids[i]) if isinstance(phon_ids[i], list) else [phon_ids[i]])
+            hl_row = hl_ids[i] if isinstance(hl_ids[i], list) else [hl_ids[i]]
+            hl_slots.append(["H" if x == 0 else "L" for x in hl_row])
+            bio_tags.append(_BIO[apbp_ids[i]] if apbp_ids[i] < len(_BIO) else "O")
+        return p_c_to_canonical(phon_slots, hl_slots, bio_tags, vocab)
+
+    del batch_size
+    return predict
 
 
 def evaluate_checkpoint(
