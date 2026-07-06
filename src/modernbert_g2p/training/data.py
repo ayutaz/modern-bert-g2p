@@ -449,10 +449,10 @@ class PCCollator:
                     continue
                 phon_labels_row[tok_idx] = self._pad_slot(
                     [
-                        vocab.id_of(p) if p != "<pad>" else self.phoneme_pad_id
+                        vocab.id_of(p) if p != "<pad>" else vocab.pad_id
                         for p in char_phon_slots[char_idx]
                     ],
-                    self.phoneme_pad_id,
+                    vocab.pad_id,
                 )
                 hl_labels_row[tok_idx] = self._pad_slot(
                     [

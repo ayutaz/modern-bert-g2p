@@ -547,17 +547,35 @@ def _build_prediction_fn_from_checkpoint(
     pilot: str,
     checkpoint: Path,
     batch_size: int,
+    dataset: str = "jsut",
 ) -> PredictionFn:
-    """Load a saved checkpoint and return a text -> CanonicalForm callable."""
+    """Load a saved checkpoint and return a text -> hypothesis callable.
+
+    For ``dataset in {"jvs", "rohan"}`` the raw phoneme output is post-converted
+    to a katakana string so it can be scored against kana references by CER/KER.
+    JSUT and hardset continue to receive the raw ``CanonicalForm`` (phoneme
+    tuple) since PER is computed at the phoneme level.
+    """
     if pilot == "p_a":
-        return _build_pa_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
-    if pilot == "p_c":
-        return _build_pc_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
-    raise NotImplementedError(
-        f"evaluate_checkpoint: automatic model loading for pilot={pilot!r} "
-        f"from checkpoint={checkpoint} is not yet wired. Currently implemented: p_a, p_c. "
-        "Pass a `prediction_fn` keyword to bypass model construction."
-    )
+        base = _build_pa_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
+    elif pilot == "p_c":
+        base = _build_pc_prediction_fn(cfg, checkpoint=checkpoint, batch_size=batch_size)
+    else:
+        raise NotImplementedError(
+            f"evaluate_checkpoint: automatic model loading for pilot={pilot!r} "
+            f"from checkpoint={checkpoint} is not yet wired. Currently implemented: p_a, p_c. "
+            "Pass a `prediction_fn` keyword to bypass model construction."
+        )
+    if dataset in {"jvs", "rohan"}:
+        from modernbert_g2p.evaluation.phoneme_to_kana import phonemes_to_kana
+
+        def _kana_wrapper(text: str) -> str:
+            canonical = base(text)
+            phonemes = getattr(canonical, "phonemes", canonical)
+            return phonemes_to_kana(phonemes)
+
+        return _kana_wrapper
+    return base
 
 
 def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> PredictionFn:
@@ -590,10 +608,26 @@ def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
         bos_id=int(model_cfg.get("bos_id", defaults.bos_id)),
         eos_id=int(model_cfg.get("eos_id", defaults.eos_id)),
         max_target_length=int(model_cfg.get("max_target_length", defaults.max_target_length)),
-        max_decode_len=int(infer_cfg.get("max_decode_len", defaults.max_decode_len)),
-        beam_size=int(infer_cfg.get("beam_size", 1)),
-        length_penalty=float(infer_cfg.get("length_penalty", defaults.length_penalty)),
-        coverage_penalty=float(infer_cfg.get("coverage_penalty", defaults.coverage_penalty)),
+        max_decode_len=int(
+            infer_cfg.get("max_decode_len") or model_cfg.get("max_decode_len") or defaults.max_decode_len
+        ),
+        beam_size=int(
+            infer_cfg.get("beam_size") or model_cfg.get("beam_size") or defaults.beam_size
+        ),
+        length_penalty=float(
+            infer_cfg.get("length_penalty")
+            if infer_cfg.get("length_penalty") is not None
+            else model_cfg.get("length_penalty")
+            if model_cfg.get("length_penalty") is not None
+            else defaults.length_penalty
+        ),
+        coverage_penalty=float(
+            infer_cfg.get("coverage_penalty")
+            if infer_cfg.get("coverage_penalty") is not None
+            else model_cfg.get("coverage_penalty")
+            if model_cfg.get("coverage_penalty") is not None
+            else defaults.coverage_penalty
+        ),
     )
 
     model = build_p_a(pa_config)
@@ -692,13 +726,11 @@ def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
             phon_ids = phon_logits.argmax(dim=-1)[0].tolist()
             hl_ids = hl_logits.argmax(dim=-1)[0].tolist()
             apbp_ids = apbp_logits.argmax(dim=-1)[0].tolist()
-            mask = attn[0].bool().tolist()
+            char_positions = enc["extras"]["char_positions"][0]
         phon_slots: list[list[int]] = []
         hl_slots: list[list[str]] = []
         bio_tags: list[str] = []
-        for i, m in enumerate(mask):
-            if not m:
-                continue
+        for i in char_positions:
             phon_slots.append(list(phon_ids[i]) if isinstance(phon_ids[i], list) else [phon_ids[i]])
             hl_row = hl_ids[i] if isinstance(hl_ids[i], list) else [hl_ids[i]]
             hl_slots.append(["H" if x == 0 else "L" for x in hl_row])
@@ -776,6 +808,7 @@ def evaluate_checkpoint(
             pilot=pilot,
             checkpoint=checkpoint,
             batch_size=batch_size,
+            dataset=dataset,
         )
 
     if dataset == "jsut":

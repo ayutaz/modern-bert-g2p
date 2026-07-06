@@ -423,3 +423,36 @@ def test_pc_collator_defaults_label_pad_to_ignore_index() -> None:
     assert coll.phoneme_pad_id == -100
     assert coll.hl_pad_id == -100
     assert coll.apbp_pad_id == -100
+
+
+def test_pc_collator_empty_slot_labeled_with_pad_class_zero() -> None:
+    """Empty phoneme slots at valid char positions must be labeled with class 0 (pad),
+    NOT with -100 (ignore_index).
+
+    Regression guard: the earlier bug shipped empty slots as ignore_index so the
+    phoneme head never learned to predict pad at inference, producing PER > 100%.
+    Now each char position must contain at least one pad-class-0 label whenever
+    the real phoneme count is < max_slot.
+    """
+    torch = _torch()
+    tok = _FakePCTokenizer()
+    coll = PCCollator(tok)
+    # A single char (桜) with 6 phonemes → slots [s,a,k,u,r,a, 0, 0] (last 2 are pad-class-0)
+    batch = [
+        make_dummy_row(id_="pc-slot", text="桜", phonemes=("s", "a", "k", "u", "r", "a")),
+    ]
+    out = coll(batch)
+    labels = out["phoneme_labels"]  # (batch, seq_len, slot)
+    # Find the character position — extras.char_positions[0] gives the char-to-token map
+    extras = out.get("extras") or {}
+    char_positions_all = extras.get("char_positions") or []
+    if not char_positions_all:
+        char_positions_all = [tok.encode([r.text for r in batch])["extras"]["char_positions"][0]]
+    char_slot_labels = labels[0, char_positions_all[0][0], :].tolist()
+    # First 6 slots have real phonemes (not pad, not -100), remainder must be 0 (pad_id)
+    assert -100 not in char_slot_labels, (
+        f"empty slots must be class 0 (pad_id), not -100 ignore_index; got {char_slot_labels}"
+    )
+    assert char_slot_labels[-1] == 0, (
+        f"last (empty) slot must be class 0 (pad_id); got {char_slot_labels}"
+    )

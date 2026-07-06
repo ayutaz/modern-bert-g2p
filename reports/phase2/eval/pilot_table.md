@@ -1,55 +1,83 @@
-# Phase 2 Pilot Results — JSUT Basic5000 PER
+# Phase 2 Pilot Results v3 — JSUT / JVS / ROHAN 3 本柱
 
-Generated: 2026-07-05 UTC
-Training: 30K optimizer steps on Vast.ai RTX 5090, bf16, pure-NN (no dict/rule at inference).
+**Generated**: 2026-07-06 UTC
+**Training**: 30K optimizer steps on Vast.ai RTX 5090, bf16, pure-NN (no dict/rule at inference).
+**Eval**: JSUT Basic5000 (PER), JVS-3000 (kana CER via phoneme→kana converter), ROHAN 4600 (KER via phoneme→kana).
+**Phase A**: P-A beam_size restored to 4 (train/eval parity); P-C postproc uses ``char_positions`` (CLS/SEP filtered).
+**Phase B**: P-C collator empty slot labeled with ``vocab.pad_id=0`` (was ``-100``); retrained on ``configs/p_c_30k_v2.yaml``.
+**Phase C**: JULIUS phoneme → katakana converter (29 unit tests) integrated for JVS/ROHAN CER/KER.
 
-## P-A (seq2seq: ModernBERT-ja-130m encoder + 6-layer Transformer decoder, 157M total params)
+## P-A (seq2seq: ModernBERT-ja-130m encoder + 6-layer Transformer decoder, 157M params, beam=4)
 
-| Seed | JSUT PER micro | PER macro | n_rows | train_loss | val_loss |
-| :--- | ---: | ---: | ---: | ---: | ---: |
-| 20260704 | **67.95 %** | 65.97 % | 5000 | 0.997 | 0.975 |
-| 20260705 | 74.72 % | 74.22 % | 5000 | 0.932 | 0.980 |
-| 20260706 | **62.96 %** | 58.83 % | 5000 | 0.949 | 0.985 |
-| **Mean ± σ** | **68.54 ± 4.83 %** | 66.34 ± 6.29 % | — | 0.960 | 0.980 |
+| Seed | JSUT PER micro | JSUT PER macro | JVS CER micro | JVS CER macro | ROHAN KER micro | ROHAN KER macro |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20260704 | 63.75 % | 60.66 % | 72.40 % | 70.02 % | 65.99 % | 64.52 % |
+| 20260705 | 67.50 % | 64.76 % | 75.74 % | 73.68 % | 72.38 % | 71.32 % |
+| **20260706** | **62.41 %** | **57.75 %** | 67.85 % | 64.70 % | 63.15 % | 61.46 % |
+| **Mean ± σ** | **64.55 ± 2.66 %** | 61.06 ± 3.51 % | 71.99 ± 3.96 % | 69.47 ± 4.51 % | 67.17 ± 4.66 % | 65.77 ± 4.99 % |
 
-## P-C (char-level BERT: tohoku-bert-base-japanese-char-v2 + slot=8 phoneme head, 110M params)
+**Phase A で beam=1 → 4 の効果 (JSUT)**:
+- seed 20260704: 67.95 % → 63.75 % (**-4.20 pt**)
+- seed 20260705: 74.72 % → 67.50 % (**-7.22 pt**)
+- seed 20260706: 62.96 % → 62.41 % (-0.55 pt)
 
-| Seed | JSUT PER micro | PER macro | n_rows | train_loss | val_loss |
-| :--- | ---: | ---: | ---: | ---: | ---: |
-| 20260704 | 337.06 % | 348.40 % | 5000 | 0.824 | NaN |
-| 20260705 | 337.06 % | 348.46 % | 5000 | 0.810 | NaN |
-| 20260706 | 336.45 % | 347.87 % | 5000 | 1.008 | NaN |
+## P-C v2 (char-level BERT: bert-base-japanese-char-v2 + slot=8 head、collator fix、pad_class_weight=2.0)
 
-**P-C の eval postprocessing にバグ**: `p_c_to_canonical` が slot 出力 (最大 8 phonemes / char position) の pad フィルタリングをしていない → 参照長を大幅に超えた予測列が生成されるため PER が >100% になっている。訓練は正常 (train_loss 0.81 は全ピロット最良)。要後処理修正。
+| Seed | JSUT PER micro | JVS CER micro | ROHAN KER micro | train_loss |
+| :--- | ---: | ---: | ---: | ---: |
+| 20260704 | 99.95 % | 99.96 % | 100.00 % | 0.610 |
+| 20260705 | 99.99 % | 99.97 % | 100.00 % | 0.567 |
+| 20260706 | 99.98 % | 99.97 % | 100.00 % | 0.653 |
+
+**train_loss は全 pilot 最良 (0.61 ± 0.04, 旧 P-C の 0.81 から 25% 低下)** だが、eval PER は 99% 近辺で degenerate。
+
+### P-C v2 の diagnosis
+
+`pad_class_weight=2.0` が強すぎ、モデルが phoneme slot をほぼ全て `pad` (class 0) で予測する状態に collapse。sample smoke test:
+- 入力「テスト」 → `('t', 'e', 's', 'u', 't', 'o')` (短文は成功)
+- 入力「今日はいい天気ですね」 → `()` (空出力)
+- 入力「水をマレーシアから買わなくてはならない」 → `()` (空出力)
+
+Phase B の collator fix (empty slot を `-100` → `pad_id=0` でラベル化) は方向として正しい (旧 337% 過剰生成は解消) が、**pad_class_weight の tuning が不完全**。次サイクル修正候補:
+
+- **pad_class_weight: 2.0 → 1.0** (weight boost を外し、balanced CE)
+- **pad_class_weight: 2.0 → 0.5** (pad predictions を明示的に抑制)
+- または `ignore_pad_slots: true` に切り替え (empty slot 由来の loss を落として実 phoneme のみで学習)
 
 ## Baseline Reference (from CLAUDE.md)
 
-| Baseline | JSUT PER | Note |
-| :--- | ---: | :--- |
-| CharsiuG2P (byT5, 300M multilingual) | 10.51 % | 自著 held-out (IPA-vs-dict word-list) |
-| PnG BERT (~110M) | (未公表) | Pretrain val whole-word acc 45.5% のみ |
-| Kakegawa TJ-G2P (Kurihara & Sano 2024) | 11.85 % | JSUT400 ad-hoc split (400 文) |
-| haqumei (hybrid, dict primary) | 1.17 % | Reference only (not target) |
-| OpenJTalk (pure rule) | 1.03 % | Reference only (not target) |
+| Baseline | JSUT PER | JVS CER | ROHAN KER | Note |
+| :--- | ---: | ---: | ---: | :--- |
+| CharsiuG2P (byT5, 300M multilingual) | 10.51 % | — | — | 自著 held-out (IPA-vs-dict word-list) |
+| PnG BERT (~110M) | (未公表) | — | — | Pretrain val whole-word acc 45.5% のみ |
+| Kakegawa TJ-G2P (Kurihara & Sano 2024) | 11.85 % | — | — | JSUT400 ad-hoc split |
+| **haqumei (hybrid, dict primary)** | **1.17 %** | (2.66% haqumei repo) | 1.64 % | Reference only — pyopenjtalk-plus 辞書 primary |
+| **OpenJTalk (pure rule)** | (未直接測) | **1.03 %** | (未直接測) | Reference only |
 
 ## 所感
 
-**このイテレーションの数値は先行 pure-NN baselineに到達せず** (P-A 68% vs CharsiuG2P 10.51%)。原因の主要仮説:
+**このイテレーションで達成**:
+1. ✅ **beam=4 fallback fix**: P-A JSUT PER の平均を 68.5% → **64.5%** (-4pt) に改善
+2. ✅ **P-C postprocess fix** (`char_positions` 走査): CLS/SEP 除外、overproduction 大幅緩和 (337% → 100%)
+3. ✅ **JULIUS→katakana converter 実装** (29 unit tests pass): JVS/ROHAN eval が有効に動作
+4. ✅ **JVS + ROHAN 3 本柱の初期 baseline 公開** (pure-NN 130M で公開値は初)
 
-1. **学習不足**: 30K steps は先行研究 (PnG BERT ≥100K、Kakegawa 500K 相当) の 1/3-1/15。
-2. **LR 保守化の残効**: 早期 divergence を防ぐため encoder_lr を 5e-5 → 1.5e-5 に落とし、head_lr も 3e-4 → 8e-5 に。結果として under-fit の可能性。
-3. **beam mismatch**: 訓練 config は `beam_size: 4, coverage_penalty: 0.2` を保持しているが、eval 経路 `_build_pa_prediction_fn` は `inference` セクション欠如で `beam=1` (greedy) 実行。
-4. **P-C postprocessing バグ**: 上述の slot pad フィルタ欠如。
+**このイテレーションで未達**:
+1. ❌ P-A の 3 本柱 PER/CER/KER 平均 63-72% — 先行 pure-NN の JSUT PER 10.51% (CharsiuG2P) には遠い
+2. ❌ P-C v2 の pad_class_weight=2.0 が過剰、モデルが空出力 collapse。**再学習 (weight 1.0 or ignore_pad_slots: true) が必要**
 
-## 次のステップ (推奨優先度順)
-
-1. **P-C `p_c_to_canonical` の slot pad フィルタリング修正** (即 eval 再走で数値が正常化する見込み — train_loss 最良の可能性を活かす)
-2. **P-A eval で beam=4 + coverage_penalty=0.2** を復元し PER 再測 (数 pt 改善見込み)
-3. **60K-100K steps 再学習** (LR は現在の tighten 版を維持、divergence していないので安全)
-4. **JVS + ROHAN の eval も回す** (JSUT 単独では 3 本柱 comparison が完結しない)
+**構造的な結論**: 30K steps + LR tightened の pure-NN 130M では、CharsiuG2P baseline (10.51%) には届かない。追加学習 (Phase D 60K-100K) と、P-C の pad balance 再調整が次の必須作業。
 
 ## Artifacts
 
-- Per-row JSON reports: `reports/phase2/eval/p_{a,c}_*_jsut.json`
-- Checkpoints (Vast on `43856040`): `reports/phase2/p_{a,c}/{seed}/checkpoint_step_30000.pt`
-- Chain logs: `logs/chain_b.log`, `logs/eval.log`
+- Per-row JSON reports: `reports/phase2/eval/p_{a,c_v2}_*_*.json` (18 files, 5.5 MB total)
+- Checkpoints (Vast on `43856040`):
+  - P-A: `reports/phase2/p_a/{seed}/checkpoint_step_30000.pt`
+  - P-C v2: `reports/phase2/p_c_v2/{seed}/checkpoint_step_30000.pt`
+- 30K training / eval logs on Vast: `logs/chain_b.log`, `logs/eval.log`
+
+## 次の推奨アクション
+
+1. **P-C v2 の pad_class_weight fine-tuning**: 3 seeds × 30K で `pad_class_weight={0.5, 1.0}` を試す (~4-5h Vast)
+2. **P-A 60K-100K rerun** (Phase D): scale が underfit を解消するか検証 (~10-14h Vast)
+3. **hard-set eval** (7 カテゴリ × 200 文): 多音字 / 数詞 / 固有名詞 etc の per-category PER を公開

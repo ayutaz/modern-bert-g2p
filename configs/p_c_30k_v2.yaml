@@ -1,0 +1,31 @@
+pilot: P-C
+model:
+  encoder_name: /root/models/bert_c
+  head_variant: C1
+  max_slot: 8
+  phoneme_vocab_size: 68
+  apbp_alpha: 0.2
+  label_smoothing: 0.05
+  pad_class_weight: 2.0
+  ignore_pad_slots: false
+data:
+  train_path: data/processed/v1_5src/train.parquet
+  val_path: data/processed/v1_5src/val.parquet
+  test_path: data/processed/v1_5src/test.parquet
+  hard_set_path: data/hard_set_seed/samples.jsonl
+  jsut_yaml: data/eval/jsut-label/text_kana/basic5000.yaml
+  jvs_dir: data/eval/jvs_nonpara_kana
+  rohan_txt: data/eval/haqumei_repo/resources/Rohan4600_transcript_utf8.txt
+  batch_size: 96
+  num_workers: 4
+training:
+  encoder_lr: 2.0e-5
+  head_lr: 5.0e-5
+  warmup_steps: 1500
+  total_steps: 30000
+  weight_decay: 0.01
+  grad_clip: 0.5
+  precision: bf16
+  seed: 20260704
+  accumulate_grad_batches: 1
+output_dir: reports/phase2/p_c_v2/{seed}
