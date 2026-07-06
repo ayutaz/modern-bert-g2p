@@ -598,7 +598,10 @@ def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
 
     model = build_p_a(pa_config)
     state = torch.load(checkpoint, map_location="cpu", weights_only=False)
-    sd = state.get("model") if isinstance(state, dict) and "model" in state else state
+    if isinstance(state, dict):
+        sd = state.get("model_state_dict") or state.get("model") or state
+    else:
+        sd = state
     load_result = model.load_state_dict(sd, strict=False)
     unexpected = list(getattr(load_result, "unexpected_keys", []) or [])
     if unexpected:
@@ -609,6 +612,8 @@ def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
             stacklevel=2,
         )
     model.eval()
+    _pa_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(_pa_device)
 
     vocab: Vocab = build_default_vocab()
     tokenizer = PATokenizer(
@@ -623,8 +628,8 @@ def _build_pa_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
             return p_a_to_canonical([], vocab)
         with torch.no_grad():
             enc = tokenizer.encode_input(text)
-            input_ids = torch.tensor([enc["input_ids"]], dtype=torch.long)
-            attn = torch.tensor([enc["attention_mask"]], dtype=torch.long)
+            input_ids = torch.tensor([enc["input_ids"]], dtype=torch.long, device=_pa_device)
+            attn = torch.tensor([enc["attention_mask"]], dtype=torch.long, device=_pa_device)
             out_ids = model.generate(
                 input_ids=input_ids,
                 attention_mask=attn,
@@ -659,9 +664,14 @@ def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
     )
     model = build_p_c(pc_config)
     state = torch.load(checkpoint, map_location="cpu", weights_only=False)
-    sd = state.get("model") if isinstance(state, dict) and "model" in state else state
+    if isinstance(state, dict):
+        sd = state.get("model_state_dict") or state.get("model") or state
+    else:
+        sd = state
     model.load_state_dict(sd, strict=False)
     model.eval()
+    _pc_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(_pc_device)
 
     vocab: Vocab = build_default_vocab()
     tokenizer = PCTokenizer(
@@ -673,8 +683,8 @@ def _build_pc_prediction_fn(cfg: Any, *, checkpoint: Path, batch_size: int) -> P
     def predict(text: str):
         with torch.no_grad():
             enc = tokenizer.encode([text])
-            input_ids = torch.tensor(enc["input_ids"], dtype=torch.long)
-            attn = torch.tensor(enc["attention_mask"], dtype=torch.long)
+            input_ids = torch.tensor(enc["input_ids"], dtype=torch.long, device=_pc_device)
+            attn = torch.tensor(enc["attention_mask"], dtype=torch.long, device=_pc_device)
             out = model(input_ids=input_ids, attention_mask=attn)
             phon_logits = out["phoneme_logits"] if "phoneme_logits" in out else out["phon_logits"]
             hl_logits = out["hl_logits"]
