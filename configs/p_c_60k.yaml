@@ -1,0 +1,31 @@
+pilot: P-C
+model:
+  encoder_name: /root/models/bert_c
+  head_variant: C1
+  max_slot: 8
+  phoneme_vocab_size: 68
+  apbp_alpha: 0.2
+  label_smoothing: 0.05
+  pad_class_weight: 0.5  # Tier 1 gotcha #3: v3 (1.0) still collapses on long inputs, try 0.5 to actively suppress pad
+  ignore_pad_slots: false  # dead YAML key (no reader in src/)
+data:
+  train_path: data/processed/v1_5src/train.parquet
+  val_path: data/processed/v1_5src/val.parquet
+  test_path: data/processed/v1_5src/test.parquet
+  hard_set_path: data/hard_set_seed/samples.jsonl
+  jsut_yaml: data/eval/jsut-label/text_kana/basic5000.yaml
+  jvs_dir: data/eval/jvs_nonpara_kana
+  rohan_txt: data/eval/haqumei_repo/resources/Rohan4600_transcript_utf8.txt
+  batch_size: 64  # safe from seed-dependent OOM (batch=96 crashed on seed 20260705 in v2 chain)
+  num_workers: 4
+training:
+  encoder_lr: 2.0e-5
+  head_lr: 5.0e-5
+  warmup_steps: 3000
+  total_steps: 60000
+  weight_decay: 0.01
+  grad_clip: 0.5
+  precision: bf16
+  seed: 20260704
+  accumulate_grad_batches: 1
+output_dir: reports/phase2/p_c_60k/{seed}

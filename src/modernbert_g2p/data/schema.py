@@ -31,6 +31,7 @@ KNOWN_LICENSES: frozenset[str] = frozenset({
 KNOWN_CATEGORIES: frozenset[str] = frozenset({
     "general",
     "numeric_unit",
+    "proper_noun",  # seed_v2 uses the umbrella tag; kanji/katakana split will land in Phase 1
     "proper_noun_kanji",
     "proper_noun_katakana",
     "counter",

@@ -1,0 +1,1560 @@
+{
+  "aggregate": {
+    "d_total": 236,
+    "i_total": 83,
+    "n_ref_total": 1982,
+    "n_rows": 140,
+    "per_macro": 47.80486896675746,
+    "per_micro": 49.24318869828456,
+    "s_total": 657
+  },
+  "by_category": {
+    "counter": {
+      "aggregate": {
+        "d_total": 20,
+        "i_total": 8,
+        "n_ref_total": 242,
+        "n_rows": 20,
+        "per_macro": 43.7411963036963,
+        "per_micro": 43.80165289256198,
+        "s_total": 78
+      },
+      "per_row": [
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-001",
+          "n": 12,
+          "per": 33.33333333333333,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-002",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 5
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 0,
+          "id": "hs-counter-003",
+          "n": 7,
+          "per": 28.57142857142857,
+          "s": 1
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-004",
+          "n": 11,
+          "per": 36.36363636363637,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-005",
+          "n": 12,
+          "per": 8.333333333333332,
+          "s": 1
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 0,
+          "id": "hs-counter-006",
+          "n": 12,
+          "per": 66.66666666666666,
+          "s": 7
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 1,
+          "id": "hs-counter-007",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 3
+        },
+        {
+          "category": "counter",
+          "d": 2,
+          "i": 0,
+          "id": "hs-counter-008",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 3
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 0,
+          "id": "hs-counter-009",
+          "n": 13,
+          "per": 38.46153846153847,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 1,
+          "id": "hs-counter-010",
+          "n": 14,
+          "per": 21.428571428571427,
+          "s": 1
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 1,
+          "id": "hs-counter-011",
+          "n": 9,
+          "per": 55.55555555555556,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 2,
+          "i": 0,
+          "id": "hs-counter-012",
+          "n": 14,
+          "per": 42.857142857142854,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 3,
+          "i": 1,
+          "id": "hs-counter-013",
+          "n": 16,
+          "per": 43.75,
+          "s": 3
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-014",
+          "n": 9,
+          "per": 77.77777777777779,
+          "s": 7
+        },
+        {
+          "category": "counter",
+          "d": 1,
+          "i": 0,
+          "id": "hs-counter-015",
+          "n": 11,
+          "per": 9.090909090909092,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 1,
+          "id": "hs-counter-016",
+          "n": 11,
+          "per": 45.45454545454545,
+          "s": 4
+        },
+        {
+          "category": "counter",
+          "d": 5,
+          "i": 0,
+          "id": "hs-counter-017",
+          "n": 13,
+          "per": 53.84615384615385,
+          "s": 2
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 0,
+          "id": "hs-counter-018",
+          "n": 15,
+          "per": 80.0,
+          "s": 12
+        },
+        {
+          "category": "counter",
+          "d": 0,
+          "i": 2,
+          "id": "hs-counter-019",
+          "n": 12,
+          "per": 75.0,
+          "s": 7
+        },
+        {
+          "category": "counter",
+          "d": 2,
+          "i": 1,
+          "id": "hs-counter-020",
+          "n": 15,
+          "per": 33.33333333333333,
+          "s": 2
+        }
+      ],
+      "scores": [
+        33.33333333333333,
+        41.66666666666667,
+        28.57142857142857,
+        36.36363636363637,
+        8.333333333333332,
+        66.66666666666666,
+        41.66666666666667,
+        41.66666666666667,
+        38.46153846153847,
+        21.428571428571427,
+        55.55555555555556,
+        42.857142857142854,
+        43.75,
+        77.77777777777779,
+        9.090909090909092,
+        45.45454545454545,
+        53.84615384615385,
+        80.0,
+        75.0,
+        33.33333333333333
+      ]
+    },
+    "english_abbreviation": {
+      "aggregate": {
+        "d_total": 44,
+        "i_total": 7,
+        "n_ref_total": 292,
+        "n_rows": 20,
+        "per_macro": 49.27879834303983,
+        "per_micro": 50.0,
+        "s_total": 95
+      },
+      "per_row": [
+        {
+          "category": "english_abbreviation",
+          "d": 1,
+          "i": 0,
+          "id": "hs-english_abbreviation-001",
+          "n": 11,
+          "per": 63.63636363636363,
+          "s": 6
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 1,
+          "i": 2,
+          "id": "hs-english_abbreviation-002",
+          "n": 13,
+          "per": 30.76923076923077,
+          "s": 1
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 5,
+          "i": 0,
+          "id": "hs-english_abbreviation-003",
+          "n": 17,
+          "per": 70.58823529411765,
+          "s": 7
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-004",
+          "n": 17,
+          "per": 35.294117647058826,
+          "s": 4
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-005",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 5
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 4,
+          "i": 0,
+          "id": "hs-english_abbreviation-006",
+          "n": 14,
+          "per": 57.14285714285714,
+          "s": 4
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-007",
+          "n": 12,
+          "per": 16.666666666666664,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-008",
+          "n": 14,
+          "per": 64.28571428571429,
+          "s": 7
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 1,
+          "i": 2,
+          "id": "hs-english_abbreviation-009",
+          "n": 14,
+          "per": 57.14285714285714,
+          "s": 5
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 1,
+          "i": 0,
+          "id": "hs-english_abbreviation-010",
+          "n": 14,
+          "per": 14.285714285714285,
+          "s": 1
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 0,
+          "i": 0,
+          "id": "hs-english_abbreviation-011",
+          "n": 13,
+          "per": 46.15384615384615,
+          "s": 6
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-012",
+          "n": 14,
+          "per": 50.0,
+          "s": 5
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-013",
+          "n": 15,
+          "per": 26.666666666666668,
+          "s": 2
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 3,
+          "i": 0,
+          "id": "hs-english_abbreviation-014",
+          "n": 19,
+          "per": 63.1578947368421,
+          "s": 9
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 6,
+          "i": 0,
+          "id": "hs-english_abbreviation-015",
+          "n": 24,
+          "per": 58.333333333333336,
+          "s": 8
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 2,
+          "id": "hs-english_abbreviation-016",
+          "n": 13,
+          "per": 53.84615384615385,
+          "s": 3
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_abbreviation-017",
+          "n": 14,
+          "per": 57.14285714285714,
+          "s": 6
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 5,
+          "i": 0,
+          "id": "hs-english_abbreviation-018",
+          "n": 17,
+          "per": 64.70588235294117,
+          "s": 6
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 0,
+          "i": 1,
+          "id": "hs-english_abbreviation-019",
+          "n": 11,
+          "per": 63.63636363636363,
+          "s": 6
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 1,
+          "i": 0,
+          "id": "hs-english_abbreviation-020",
+          "n": 11,
+          "per": 45.45454545454545,
+          "s": 4
+        }
+      ],
+      "scores": [
+        63.63636363636363,
+        30.76923076923077,
+        70.58823529411765,
+        35.294117647058826,
+        46.666666666666664,
+        57.14285714285714,
+        16.666666666666664,
+        64.28571428571429,
+        57.14285714285714,
+        14.285714285714285,
+        46.15384615384615,
+        50.0,
+        26.666666666666668,
+        63.1578947368421,
+        58.333333333333336,
+        53.84615384615385,
+        57.14285714285714,
+        64.70588235294117,
+        63.63636363636363,
+        45.45454545454545
+      ]
+    },
+    "english_mixed": {
+      "aggregate": {
+        "d_total": 40,
+        "i_total": 17,
+        "n_ref_total": 322,
+        "n_rows": 20,
+        "per_macro": 58.06644256586206,
+        "per_micro": 56.83229813664597,
+        "s_total": 126
+      },
+      "per_row": [
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 1,
+          "id": "hs-english_mixed-001",
+          "n": 12,
+          "per": 91.66666666666666,
+          "s": 10
+        },
+        {
+          "category": "english_mixed",
+          "d": 6,
+          "i": 0,
+          "id": "hs-english_mixed-002",
+          "n": 17,
+          "per": 64.70588235294117,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_mixed-003",
+          "n": 14,
+          "per": 64.28571428571429,
+          "s": 7
+        },
+        {
+          "category": "english_mixed",
+          "d": 1,
+          "i": 1,
+          "id": "hs-english_mixed-004",
+          "n": 20,
+          "per": 45.0,
+          "s": 7
+        },
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 1,
+          "id": "hs-english_mixed-005",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 6
+        },
+        {
+          "category": "english_mixed",
+          "d": 2,
+          "i": 0,
+          "id": "hs-english_mixed-006",
+          "n": 14,
+          "per": 42.857142857142854,
+          "s": 4
+        },
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 0,
+          "id": "hs-english_mixed-007",
+          "n": 16,
+          "per": 87.5,
+          "s": 14
+        },
+        {
+          "category": "english_mixed",
+          "d": 5,
+          "i": 1,
+          "id": "hs-english_mixed-008",
+          "n": 22,
+          "per": 45.45454545454545,
+          "s": 4
+        },
+        {
+          "category": "english_mixed",
+          "d": 2,
+          "i": 2,
+          "id": "hs-english_mixed-009",
+          "n": 15,
+          "per": 80.0,
+          "s": 8
+        },
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 0,
+          "id": "hs-english_mixed-010",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 7
+        },
+        {
+          "category": "english_mixed",
+          "d": 1,
+          "i": 2,
+          "id": "hs-english_mixed-011",
+          "n": 14,
+          "per": 64.28571428571429,
+          "s": 6
+        },
+        {
+          "category": "english_mixed",
+          "d": 1,
+          "i": 1,
+          "id": "hs-english_mixed-012",
+          "n": 16,
+          "per": 43.75,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 5,
+          "i": 4,
+          "id": "hs-english_mixed-013",
+          "n": 19,
+          "per": 78.94736842105263,
+          "s": 6
+        },
+        {
+          "category": "english_mixed",
+          "d": 3,
+          "i": 0,
+          "id": "hs-english_mixed-014",
+          "n": 20,
+          "per": 40.0,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 2,
+          "id": "hs-english_mixed-015",
+          "n": 12,
+          "per": 66.66666666666666,
+          "s": 6
+        },
+        {
+          "category": "english_mixed",
+          "d": 1,
+          "i": 1,
+          "id": "hs-english_mixed-016",
+          "n": 17,
+          "per": 41.17647058823529,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 5,
+          "i": 1,
+          "id": "hs-english_mixed-017",
+          "n": 20,
+          "per": 30.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 0,
+          "i": 0,
+          "id": "hs-english_mixed-018",
+          "n": 9,
+          "per": 55.55555555555556,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 5,
+          "i": 0,
+          "id": "hs-english_mixed-019",
+          "n": 18,
+          "per": 55.55555555555556,
+          "s": 5
+        },
+        {
+          "category": "english_mixed",
+          "d": 1,
+          "i": 0,
+          "id": "hs-english_mixed-020",
+          "n": 17,
+          "per": 70.58823529411765,
+          "s": 11
+        }
+      ],
+      "scores": [
+        91.66666666666666,
+        64.70588235294117,
+        64.28571428571429,
+        45.0,
+        46.666666666666664,
+        42.857142857142854,
+        87.5,
+        45.45454545454545,
+        80.0,
+        46.666666666666664,
+        64.28571428571429,
+        43.75,
+        78.94736842105263,
+        40.0,
+        66.66666666666666,
+        41.17647058823529,
+        30.0,
+        55.55555555555556,
+        55.55555555555556,
+        70.58823529411765
+      ]
+    },
+    "general": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    },
+    "loanword": {
+      "aggregate": {
+        "d_total": 36,
+        "i_total": 14,
+        "n_ref_total": 272,
+        "n_rows": 20,
+        "per_macro": 48.01230060788884,
+        "per_micro": 48.89705882352941,
+        "s_total": 83
+      },
+      "per_row": [
+        {
+          "category": "loanword",
+          "d": 1,
+          "i": 0,
+          "id": "hs-loanword-001",
+          "n": 9,
+          "per": 22.22222222222222,
+          "s": 1
+        },
+        {
+          "category": "loanword",
+          "d": 0,
+          "i": 1,
+          "id": "hs-loanword-002",
+          "n": 10,
+          "per": 90.0,
+          "s": 8
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 2,
+          "id": "hs-loanword-003",
+          "n": 11,
+          "per": 72.72727272727273,
+          "s": 3
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 2,
+          "id": "hs-loanword-004",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 2
+        },
+        {
+          "category": "loanword",
+          "d": 1,
+          "i": 1,
+          "id": "hs-loanword-005",
+          "n": 12,
+          "per": 50.0,
+          "s": 4
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 0,
+          "id": "hs-loanword-006",
+          "n": 17,
+          "per": 41.17647058823529,
+          "s": 5
+        },
+        {
+          "category": "loanword",
+          "d": 0,
+          "i": 0,
+          "id": "hs-loanword-007",
+          "n": 13,
+          "per": 23.076923076923077,
+          "s": 3
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 1,
+          "id": "hs-loanword-008",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 4
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 0,
+          "id": "hs-loanword-009",
+          "n": 16,
+          "per": 75.0,
+          "s": 9
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 1,
+          "id": "hs-loanword-010",
+          "n": 13,
+          "per": 53.84615384615385,
+          "s": 4
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 0,
+          "id": "hs-loanword-011",
+          "n": 12,
+          "per": 33.33333333333333,
+          "s": 2
+        },
+        {
+          "category": "loanword",
+          "d": 0,
+          "i": 0,
+          "id": "hs-loanword-012",
+          "n": 11,
+          "per": 36.36363636363637,
+          "s": 4
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 1,
+          "id": "hs-loanword-013",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 1
+        },
+        {
+          "category": "loanword",
+          "d": 1,
+          "i": 0,
+          "id": "hs-loanword-014",
+          "n": 16,
+          "per": 62.5,
+          "s": 9
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 0,
+          "id": "hs-loanword-015",
+          "n": 20,
+          "per": 65.0,
+          "s": 10
+        },
+        {
+          "category": "loanword",
+          "d": 0,
+          "i": 0,
+          "id": "hs-loanword-016",
+          "n": 14,
+          "per": 21.428571428571427,
+          "s": 3
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 1,
+          "id": "hs-loanword-017",
+          "n": 14,
+          "per": 35.714285714285715,
+          "s": 2
+        },
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 0,
+          "id": "hs-loanword-018",
+          "n": 12,
+          "per": 25.0,
+          "s": 1
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 2,
+          "id": "hs-loanword-019",
+          "n": 14,
+          "per": 42.857142857142854,
+          "s": 1
+        },
+        {
+          "category": "loanword",
+          "d": 3,
+          "i": 2,
+          "id": "hs-loanword-020",
+          "n": 16,
+          "per": 75.0,
+          "s": 7
+        }
+      ],
+      "scores": [
+        22.22222222222222,
+        90.0,
+        72.72727272727273,
+        46.666666666666664,
+        50.0,
+        41.17647058823529,
+        23.076923076923077,
+        46.666666666666664,
+        75.0,
+        53.84615384615385,
+        33.33333333333333,
+        36.36363636363637,
+        41.66666666666667,
+        62.5,
+        65.0,
+        21.428571428571427,
+        35.714285714285715,
+        25.0,
+        42.857142857142854,
+        75.0
+      ]
+    },
+    "numeric_unit": {
+      "aggregate": {
+        "d_total": 40,
+        "i_total": 22,
+        "n_ref_total": 355,
+        "n_rows": 20,
+        "per_macro": 53.17442278074598,
+        "per_micro": 54.3661971830986,
+        "s_total": 131
+      },
+      "per_row": [
+        {
+          "category": "numeric_unit",
+          "d": 0,
+          "i": 0,
+          "id": "hs-numeric_unit-001",
+          "n": 13,
+          "per": 38.46153846153847,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 0,
+          "id": "hs-numeric_unit-002",
+          "n": 14,
+          "per": 64.28571428571429,
+          "s": 7
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 3,
+          "id": "hs-numeric_unit-003",
+          "n": 17,
+          "per": 64.70588235294117,
+          "s": 6
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 0,
+          "id": "hs-numeric_unit-004",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 1,
+          "i": 1,
+          "id": "hs-numeric_unit-005",
+          "n": 23,
+          "per": 60.86956521739131,
+          "s": 12
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 3,
+          "id": "hs-numeric_unit-006",
+          "n": 22,
+          "per": 54.54545454545454,
+          "s": 6
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 1,
+          "id": "hs-numeric_unit-007",
+          "n": 25,
+          "per": 60.0,
+          "s": 11
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 1,
+          "id": "hs-numeric_unit-008",
+          "n": 18,
+          "per": 44.44444444444444,
+          "s": 4
+        },
+        {
+          "category": "numeric_unit",
+          "d": 1,
+          "i": 2,
+          "id": "hs-numeric_unit-009",
+          "n": 21,
+          "per": 76.19047619047619,
+          "s": 13
+        },
+        {
+          "category": "numeric_unit",
+          "d": 1,
+          "i": 1,
+          "id": "hs-numeric_unit-010",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 1,
+          "i": 2,
+          "id": "hs-numeric_unit-011",
+          "n": 18,
+          "per": 77.77777777777779,
+          "s": 11
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 0,
+          "id": "hs-numeric_unit-012",
+          "n": 19,
+          "per": 42.10526315789473,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 0,
+          "id": "hs-numeric_unit-013",
+          "n": 18,
+          "per": 50.0,
+          "s": 7
+        },
+        {
+          "category": "numeric_unit",
+          "d": 0,
+          "i": 3,
+          "id": "hs-numeric_unit-014",
+          "n": 16,
+          "per": 25.0,
+          "s": 1
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 1,
+          "id": "hs-numeric_unit-015",
+          "n": 18,
+          "per": 61.111111111111114,
+          "s": 7
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 0,
+          "id": "hs-numeric_unit-016",
+          "n": 12,
+          "per": 25.0,
+          "s": 1
+        },
+        {
+          "category": "numeric_unit",
+          "d": 5,
+          "i": 0,
+          "id": "hs-numeric_unit-017",
+          "n": 18,
+          "per": 55.55555555555556,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 3,
+          "i": 2,
+          "id": "hs-numeric_unit-018",
+          "n": 16,
+          "per": 62.5,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 1,
+          "i": 2,
+          "id": "hs-numeric_unit-019",
+          "n": 18,
+          "per": 44.44444444444444,
+          "s": 5
+        },
+        {
+          "category": "numeric_unit",
+          "d": 2,
+          "i": 0,
+          "id": "hs-numeric_unit-020",
+          "n": 19,
+          "per": 63.1578947368421,
+          "s": 10
+        }
+      ],
+      "scores": [
+        38.46153846153847,
+        64.28571428571429,
+        64.70588235294117,
+        46.666666666666664,
+        60.86956521739131,
+        54.54545454545454,
+        60.0,
+        44.44444444444444,
+        76.19047619047619,
+        46.666666666666664,
+        77.77777777777779,
+        42.10526315789473,
+        50.0,
+        25.0,
+        61.111111111111114,
+        25.0,
+        55.55555555555556,
+        62.5,
+        44.44444444444444,
+        63.1578947368421
+      ]
+    },
+    "polyphone": {
+      "aggregate": {
+        "d_total": 37,
+        "i_total": 6,
+        "n_ref_total": 242,
+        "n_rows": 20,
+        "per_macro": 45.45678626928627,
+        "per_micro": 47.107438016528924,
+        "s_total": 71
+      },
+      "per_row": [
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 0,
+          "id": "hs-polyphone-001",
+          "n": 10,
+          "per": 60.0,
+          "s": 6
+        },
+        {
+          "category": "polyphone",
+          "d": 3,
+          "i": 0,
+          "id": "hs-polyphone-002",
+          "n": 15,
+          "per": 46.666666666666664,
+          "s": 4
+        },
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 2,
+          "id": "hs-polyphone-003",
+          "n": 8,
+          "per": 50.0,
+          "s": 2
+        },
+        {
+          "category": "polyphone",
+          "d": 5,
+          "i": 0,
+          "id": "hs-polyphone-004",
+          "n": 12,
+          "per": 75.0,
+          "s": 4
+        },
+        {
+          "category": "polyphone",
+          "d": 3,
+          "i": 0,
+          "id": "hs-polyphone-005",
+          "n": 13,
+          "per": 76.92307692307693,
+          "s": 7
+        },
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 0,
+          "id": "hs-polyphone-006",
+          "n": 8,
+          "per": 0.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 4,
+          "i": 1,
+          "id": "hs-polyphone-007",
+          "n": 18,
+          "per": 55.55555555555556,
+          "s": 5
+        },
+        {
+          "category": "polyphone",
+          "d": 4,
+          "i": 1,
+          "id": "hs-polyphone-008",
+          "n": 18,
+          "per": 66.66666666666666,
+          "s": 7
+        },
+        {
+          "category": "polyphone",
+          "d": 2,
+          "i": 1,
+          "id": "hs-polyphone-009",
+          "n": 8,
+          "per": 50.0,
+          "s": 1
+        },
+        {
+          "category": "polyphone",
+          "d": 1,
+          "i": 0,
+          "id": "hs-polyphone-010",
+          "n": 11,
+          "per": 54.54545454545454,
+          "s": 5
+        },
+        {
+          "category": "polyphone",
+          "d": 2,
+          "i": 0,
+          "id": "hs-polyphone-011",
+          "n": 11,
+          "per": 45.45454545454545,
+          "s": 3
+        },
+        {
+          "category": "polyphone",
+          "d": 3,
+          "i": 0,
+          "id": "hs-polyphone-012",
+          "n": 12,
+          "per": 66.66666666666666,
+          "s": 5
+        },
+        {
+          "category": "polyphone",
+          "d": 2,
+          "i": 0,
+          "id": "hs-polyphone-013",
+          "n": 13,
+          "per": 46.15384615384615,
+          "s": 4
+        },
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 1,
+          "id": "hs-polyphone-014",
+          "n": 16,
+          "per": 56.25,
+          "s": 8
+        },
+        {
+          "category": "polyphone",
+          "d": 2,
+          "i": 0,
+          "id": "hs-polyphone-015",
+          "n": 8,
+          "per": 62.5,
+          "s": 3
+        },
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 0,
+          "id": "hs-polyphone-016",
+          "n": 10,
+          "per": 10.0,
+          "s": 1
+        },
+        {
+          "category": "polyphone",
+          "d": 2,
+          "i": 0,
+          "id": "hs-polyphone-017",
+          "n": 11,
+          "per": 18.181818181818183,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 1,
+          "i": 0,
+          "id": "hs-polyphone-018",
+          "n": 15,
+          "per": 40.0,
+          "s": 5
+        },
+        {
+          "category": "polyphone",
+          "d": 3,
+          "i": 0,
+          "id": "hs-polyphone-019",
+          "n": 14,
+          "per": 28.57142857142857,
+          "s": 1
+        },
+        {
+          "category": "polyphone",
+          "d": 0,
+          "i": 0,
+          "id": "hs-polyphone-020",
+          "n": 11,
+          "per": 0.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        60.0,
+        46.666666666666664,
+        50.0,
+        75.0,
+        76.92307692307693,
+        0.0,
+        55.55555555555556,
+        66.66666666666666,
+        50.0,
+        54.54545454545454,
+        45.45454545454545,
+        66.66666666666666,
+        46.15384615384615,
+        56.25,
+        62.5,
+        10.0,
+        18.181818181818183,
+        40.0,
+        28.57142857142857,
+        0.0
+      ]
+    },
+    "proper_noun": {
+      "aggregate": {
+        "d_total": 19,
+        "i_total": 9,
+        "n_ref_total": 257,
+        "n_rows": 20,
+        "per_macro": 36.90413589678296,
+        "per_micro": 39.29961089494164,
+        "s_total": 73
+      },
+      "per_row": [
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-001",
+          "n": 11,
+          "per": 18.181818181818183,
+          "s": 2
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 1,
+          "id": "hs-proper_noun-002",
+          "n": 7,
+          "per": 14.285714285714285,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-003",
+          "n": 12,
+          "per": 16.666666666666664,
+          "s": 2
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-004",
+          "n": 11,
+          "per": 27.27272727272727,
+          "s": 3
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 5,
+          "id": "hs-proper_noun-005",
+          "n": 18,
+          "per": 94.44444444444444,
+          "s": 11
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 0,
+          "id": "hs-proper_noun-006",
+          "n": 11,
+          "per": 72.72727272727273,
+          "s": 7
+        },
+        {
+          "category": "proper_noun",
+          "d": 3,
+          "i": 0,
+          "id": "hs-proper_noun-007",
+          "n": 17,
+          "per": 35.294117647058826,
+          "s": 3
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 0,
+          "id": "hs-proper_noun-008",
+          "n": 16,
+          "per": 37.5,
+          "s": 5
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-009",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 5
+        },
+        {
+          "category": "proper_noun",
+          "d": 2,
+          "i": 1,
+          "id": "hs-proper_noun-010",
+          "n": 15,
+          "per": 53.333333333333336,
+          "s": 5
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 0,
+          "id": "hs-proper_noun-011",
+          "n": 12,
+          "per": 41.66666666666667,
+          "s": 4
+        },
+        {
+          "category": "proper_noun",
+          "d": 3,
+          "i": 0,
+          "id": "hs-proper_noun-012",
+          "n": 13,
+          "per": 53.84615384615385,
+          "s": 4
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-013",
+          "n": 11,
+          "per": 9.090909090909092,
+          "s": 1
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 0,
+          "id": "hs-proper_noun-014",
+          "n": 15,
+          "per": 33.33333333333333,
+          "s": 4
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-015",
+          "n": 15,
+          "per": 20.0,
+          "s": 3
+        },
+        {
+          "category": "proper_noun",
+          "d": 3,
+          "i": 0,
+          "id": "hs-proper_noun-016",
+          "n": 13,
+          "per": 46.15384615384615,
+          "s": 3
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-017",
+          "n": 14,
+          "per": 28.57142857142857,
+          "s": 4
+        },
+        {
+          "category": "proper_noun",
+          "d": 2,
+          "i": 2,
+          "id": "hs-proper_noun-018",
+          "n": 14,
+          "per": 35.714285714285715,
+          "s": 1
+        },
+        {
+          "category": "proper_noun",
+          "d": 1,
+          "i": 0,
+          "id": "hs-proper_noun-019",
+          "n": 12,
+          "per": 58.333333333333336,
+          "s": 6
+        },
+        {
+          "category": "proper_noun",
+          "d": 0,
+          "i": 0,
+          "id": "hs-proper_noun-020",
+          "n": 8,
+          "per": 0.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        18.181818181818183,
+        14.285714285714285,
+        16.666666666666664,
+        27.27272727272727,
+        94.44444444444444,
+        72.72727272727273,
+        35.294117647058826,
+        37.5,
+        41.66666666666667,
+        53.333333333333336,
+        41.66666666666667,
+        53.84615384615385,
+        9.090909090909092,
+        33.33333333333333,
+        20.0,
+        46.15384615384615,
+        28.57142857142857,
+        35.714285714285715,
+        58.333333333333336,
+        0.0
+      ]
+    },
+    "proper_noun_kanji": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    },
+    "proper_noun_katakana": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    }
+  },
+  "checkpoint": "/root/modern-bert-g2p/reports/phase2/p_a/20260706/checkpoint_step_30000.pt",
+  "dataset": "hardset",
+  "pilot": "p_a"
+}

@@ -445,6 +445,18 @@ def _load_hardset_rows(hardset_jsonl_path: Path) -> list[Row]:
             if not line:
                 continue
             obj = json.loads(line)
+            # Adapt the curation seed schema (accent / accent_phrase_boundaries / notes,
+            # no source / source_license) to the canonical Phase-1 Row schema.
+            # See docs/design and CLAUDE.md — the seed fixture lives at
+            # data/hard_set_seed/samples.jsonl and uses the linguist-facing keys.
+            if "mora_accents" not in obj and "accent" in obj:
+                notes_val = obj.pop("notes", None)
+                obj["mora_accents"] = obj.pop("accent")
+                obj["accent_boundaries"] = obj.pop("accent_phrase_boundaries", [])
+                obj.setdefault("source", "pyopenjtalk_plus")
+                obj.setdefault("source_license", "BSD3")
+                if notes_val is not None:
+                    obj.setdefault("extra", {})["notes"] = notes_val
             try:
                 rows.append(from_dict(obj))
             except ValueError as e:

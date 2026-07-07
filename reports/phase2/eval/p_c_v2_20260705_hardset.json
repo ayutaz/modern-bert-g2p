@@ -1,0 +1,1560 @@
+{
+  "aggregate": {
+    "d_total": 1960,
+    "i_total": 0,
+    "n_ref_total": 1982,
+    "n_rows": 140,
+    "per_macro": 98.5515873015873,
+    "per_micro": 98.99091826437942,
+    "s_total": 2
+  },
+  "by_category": {
+    "counter": {
+      "aggregate": {
+        "d_total": 242,
+        "i_total": 0,
+        "n_ref_total": 242,
+        "n_rows": 20,
+        "per_macro": 100.0,
+        "per_micro": 100.0,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-001",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-002",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 7,
+          "i": 0,
+          "id": "hs-counter-003",
+          "n": 7,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 11,
+          "i": 0,
+          "id": "hs-counter-004",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-005",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-006",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-007",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-008",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 13,
+          "i": 0,
+          "id": "hs-counter-009",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 14,
+          "i": 0,
+          "id": "hs-counter-010",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 9,
+          "i": 0,
+          "id": "hs-counter-011",
+          "n": 9,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 14,
+          "i": 0,
+          "id": "hs-counter-012",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 16,
+          "i": 0,
+          "id": "hs-counter-013",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 9,
+          "i": 0,
+          "id": "hs-counter-014",
+          "n": 9,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 11,
+          "i": 0,
+          "id": "hs-counter-015",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 11,
+          "i": 0,
+          "id": "hs-counter-016",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 13,
+          "i": 0,
+          "id": "hs-counter-017",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 15,
+          "i": 0,
+          "id": "hs-counter-018",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 12,
+          "i": 0,
+          "id": "hs-counter-019",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "counter",
+          "d": 15,
+          "i": 0,
+          "id": "hs-counter-020",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "english_abbreviation": {
+      "aggregate": {
+        "d_total": 292,
+        "i_total": 0,
+        "n_ref_total": 292,
+        "n_rows": 20,
+        "per_macro": 100.0,
+        "per_micro": 100.0,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "english_abbreviation",
+          "d": 11,
+          "i": 0,
+          "id": "hs-english_abbreviation-001",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 13,
+          "i": 0,
+          "id": "hs-english_abbreviation-002",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_abbreviation-003",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_abbreviation-004",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 15,
+          "i": 0,
+          "id": "hs-english_abbreviation-005",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-006",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 12,
+          "i": 0,
+          "id": "hs-english_abbreviation-007",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-008",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-009",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-010",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 13,
+          "i": 0,
+          "id": "hs-english_abbreviation-011",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-012",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 15,
+          "i": 0,
+          "id": "hs-english_abbreviation-013",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 19,
+          "i": 0,
+          "id": "hs-english_abbreviation-014",
+          "n": 19,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 24,
+          "i": 0,
+          "id": "hs-english_abbreviation-015",
+          "n": 24,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 13,
+          "i": 0,
+          "id": "hs-english_abbreviation-016",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_abbreviation-017",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_abbreviation-018",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 11,
+          "i": 0,
+          "id": "hs-english_abbreviation-019",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_abbreviation",
+          "d": 11,
+          "i": 0,
+          "id": "hs-english_abbreviation-020",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "english_mixed": {
+      "aggregate": {
+        "d_total": 322,
+        "i_total": 0,
+        "n_ref_total": 322,
+        "n_rows": 20,
+        "per_macro": 100.0,
+        "per_micro": 100.0,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "english_mixed",
+          "d": 12,
+          "i": 0,
+          "id": "hs-english_mixed-001",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_mixed-002",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_mixed-003",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 20,
+          "i": 0,
+          "id": "hs-english_mixed-004",
+          "n": 20,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 15,
+          "i": 0,
+          "id": "hs-english_mixed-005",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_mixed-006",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 16,
+          "i": 0,
+          "id": "hs-english_mixed-007",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 22,
+          "i": 0,
+          "id": "hs-english_mixed-008",
+          "n": 22,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 15,
+          "i": 0,
+          "id": "hs-english_mixed-009",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 15,
+          "i": 0,
+          "id": "hs-english_mixed-010",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 14,
+          "i": 0,
+          "id": "hs-english_mixed-011",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 16,
+          "i": 0,
+          "id": "hs-english_mixed-012",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 19,
+          "i": 0,
+          "id": "hs-english_mixed-013",
+          "n": 19,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 20,
+          "i": 0,
+          "id": "hs-english_mixed-014",
+          "n": 20,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 12,
+          "i": 0,
+          "id": "hs-english_mixed-015",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_mixed-016",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 20,
+          "i": 0,
+          "id": "hs-english_mixed-017",
+          "n": 20,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 9,
+          "i": 0,
+          "id": "hs-english_mixed-018",
+          "n": 9,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 18,
+          "i": 0,
+          "id": "hs-english_mixed-019",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "english_mixed",
+          "d": 17,
+          "i": 0,
+          "id": "hs-english_mixed-020",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "general": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    },
+    "loanword": {
+      "aggregate": {
+        "d_total": 254,
+        "i_total": 0,
+        "n_ref_total": 272,
+        "n_rows": 20,
+        "per_macro": 91.11111111111111,
+        "per_micro": 93.38235294117648,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "loanword",
+          "d": 2,
+          "i": 0,
+          "id": "hs-loanword-001",
+          "n": 9,
+          "per": 22.22222222222222,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 10,
+          "i": 0,
+          "id": "hs-loanword-002",
+          "n": 10,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 0,
+          "i": 0,
+          "id": "hs-loanword-003",
+          "n": 11,
+          "per": 0.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 15,
+          "i": 0,
+          "id": "hs-loanword-004",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 12,
+          "i": 0,
+          "id": "hs-loanword-005",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 17,
+          "i": 0,
+          "id": "hs-loanword-006",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 13,
+          "i": 0,
+          "id": "hs-loanword-007",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 15,
+          "i": 0,
+          "id": "hs-loanword-008",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 16,
+          "i": 0,
+          "id": "hs-loanword-009",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 13,
+          "i": 0,
+          "id": "hs-loanword-010",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 12,
+          "i": 0,
+          "id": "hs-loanword-011",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 11,
+          "i": 0,
+          "id": "hs-loanword-012",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 12,
+          "i": 0,
+          "id": "hs-loanword-013",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 16,
+          "i": 0,
+          "id": "hs-loanword-014",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 20,
+          "i": 0,
+          "id": "hs-loanword-015",
+          "n": 20,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 14,
+          "i": 0,
+          "id": "hs-loanword-016",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 14,
+          "i": 0,
+          "id": "hs-loanword-017",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 12,
+          "i": 0,
+          "id": "hs-loanword-018",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 14,
+          "i": 0,
+          "id": "hs-loanword-019",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "loanword",
+          "d": 16,
+          "i": 0,
+          "id": "hs-loanword-020",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        22.22222222222222,
+        100.0,
+        0.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "numeric_unit": {
+      "aggregate": {
+        "d_total": 355,
+        "i_total": 0,
+        "n_ref_total": 355,
+        "n_rows": 20,
+        "per_macro": 100.0,
+        "per_micro": 100.0,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "numeric_unit",
+          "d": 13,
+          "i": 0,
+          "id": "hs-numeric_unit-001",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 14,
+          "i": 0,
+          "id": "hs-numeric_unit-002",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 17,
+          "i": 0,
+          "id": "hs-numeric_unit-003",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 15,
+          "i": 0,
+          "id": "hs-numeric_unit-004",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 23,
+          "i": 0,
+          "id": "hs-numeric_unit-005",
+          "n": 23,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 22,
+          "i": 0,
+          "id": "hs-numeric_unit-006",
+          "n": 22,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 25,
+          "i": 0,
+          "id": "hs-numeric_unit-007",
+          "n": 25,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-008",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 21,
+          "i": 0,
+          "id": "hs-numeric_unit-009",
+          "n": 21,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 15,
+          "i": 0,
+          "id": "hs-numeric_unit-010",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-011",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 19,
+          "i": 0,
+          "id": "hs-numeric_unit-012",
+          "n": 19,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-013",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 16,
+          "i": 0,
+          "id": "hs-numeric_unit-014",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-015",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 12,
+          "i": 0,
+          "id": "hs-numeric_unit-016",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-017",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 16,
+          "i": 0,
+          "id": "hs-numeric_unit-018",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 18,
+          "i": 0,
+          "id": "hs-numeric_unit-019",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "numeric_unit",
+          "d": 19,
+          "i": 0,
+          "id": "hs-numeric_unit-020",
+          "n": 19,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "polyphone": {
+      "aggregate": {
+        "d_total": 238,
+        "i_total": 0,
+        "n_ref_total": 242,
+        "n_rows": 20,
+        "per_macro": 98.75,
+        "per_micro": 99.17355371900827,
+        "s_total": 2
+      },
+      "per_row": [
+        {
+          "category": "polyphone",
+          "d": 10,
+          "i": 0,
+          "id": "hs-polyphone-001",
+          "n": 10,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 15,
+          "i": 0,
+          "id": "hs-polyphone-002",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 8,
+          "i": 0,
+          "id": "hs-polyphone-003",
+          "n": 8,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 12,
+          "i": 0,
+          "id": "hs-polyphone-004",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 13,
+          "i": 0,
+          "id": "hs-polyphone-005",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 8,
+          "i": 0,
+          "id": "hs-polyphone-006",
+          "n": 8,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 18,
+          "i": 0,
+          "id": "hs-polyphone-007",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 18,
+          "i": 0,
+          "id": "hs-polyphone-008",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 8,
+          "i": 0,
+          "id": "hs-polyphone-009",
+          "n": 8,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 11,
+          "i": 0,
+          "id": "hs-polyphone-010",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 11,
+          "i": 0,
+          "id": "hs-polyphone-011",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 12,
+          "i": 0,
+          "id": "hs-polyphone-012",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 13,
+          "i": 0,
+          "id": "hs-polyphone-013",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 16,
+          "i": 0,
+          "id": "hs-polyphone-014",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 4,
+          "i": 0,
+          "id": "hs-polyphone-015",
+          "n": 8,
+          "per": 75.0,
+          "s": 2
+        },
+        {
+          "category": "polyphone",
+          "d": 10,
+          "i": 0,
+          "id": "hs-polyphone-016",
+          "n": 10,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 11,
+          "i": 0,
+          "id": "hs-polyphone-017",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 15,
+          "i": 0,
+          "id": "hs-polyphone-018",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 14,
+          "i": 0,
+          "id": "hs-polyphone-019",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "polyphone",
+          "d": 11,
+          "i": 0,
+          "id": "hs-polyphone-020",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        75.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "proper_noun": {
+      "aggregate": {
+        "d_total": 257,
+        "i_total": 0,
+        "n_ref_total": 257,
+        "n_rows": 20,
+        "per_macro": 100.0,
+        "per_micro": 100.0,
+        "s_total": 0
+      },
+      "per_row": [
+        {
+          "category": "proper_noun",
+          "d": 11,
+          "i": 0,
+          "id": "hs-proper_noun-001",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 7,
+          "i": 0,
+          "id": "hs-proper_noun-002",
+          "n": 7,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 12,
+          "i": 0,
+          "id": "hs-proper_noun-003",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 11,
+          "i": 0,
+          "id": "hs-proper_noun-004",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 18,
+          "i": 0,
+          "id": "hs-proper_noun-005",
+          "n": 18,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 11,
+          "i": 0,
+          "id": "hs-proper_noun-006",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 17,
+          "i": 0,
+          "id": "hs-proper_noun-007",
+          "n": 17,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 16,
+          "i": 0,
+          "id": "hs-proper_noun-008",
+          "n": 16,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 12,
+          "i": 0,
+          "id": "hs-proper_noun-009",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 15,
+          "i": 0,
+          "id": "hs-proper_noun-010",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 12,
+          "i": 0,
+          "id": "hs-proper_noun-011",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 13,
+          "i": 0,
+          "id": "hs-proper_noun-012",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 11,
+          "i": 0,
+          "id": "hs-proper_noun-013",
+          "n": 11,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 15,
+          "i": 0,
+          "id": "hs-proper_noun-014",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 15,
+          "i": 0,
+          "id": "hs-proper_noun-015",
+          "n": 15,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 13,
+          "i": 0,
+          "id": "hs-proper_noun-016",
+          "n": 13,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 14,
+          "i": 0,
+          "id": "hs-proper_noun-017",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 14,
+          "i": 0,
+          "id": "hs-proper_noun-018",
+          "n": 14,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 12,
+          "i": 0,
+          "id": "hs-proper_noun-019",
+          "n": 12,
+          "per": 100.0,
+          "s": 0
+        },
+        {
+          "category": "proper_noun",
+          "d": 8,
+          "i": 0,
+          "id": "hs-proper_noun-020",
+          "n": 8,
+          "per": 100.0,
+          "s": 0
+        }
+      ],
+      "scores": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0
+      ]
+    },
+    "proper_noun_kanji": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    },
+    "proper_noun_katakana": {
+      "aggregate": {
+        "d_total": 0,
+        "i_total": 0,
+        "n_ref_total": 0,
+        "n_rows": 0,
+        "per_macro": 0.0,
+        "per_micro": 0.0,
+        "s_total": 0
+      },
+      "per_row": [],
+      "scores": []
+    }
+  },
+  "checkpoint": "/root/modern-bert-g2p/reports/phase2/p_c_v2/20260705/checkpoint_step_30000.pt",
+  "dataset": "hardset",
+  "pilot": "p_c"
+}

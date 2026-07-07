@@ -297,11 +297,35 @@ def test_run_eval_p_a_requires_prediction_or_model_triplet() -> None:
         run_eval_p_a(gold, None)
 
 
-def test_score_hardset_rejects_legacy_fixture(tmp_path: Path) -> None:
-    bad_path = tmp_path / "legacy.jsonl"
-    bad_path.write_text(
+def test_score_hardset_accepts_curation_seed_schema(tmp_path: Path) -> None:
+    """Adapter should translate the curation-side schema (accent / accent_phrase_boundaries / notes,
+    no source / source_license) into the Phase-1 Row schema on the fly.
+
+    Regression guard against the earlier state where the seed samples.jsonl was
+    silently rejected by from_dict and hard-set eval was impossible without a
+    manual data migration.
+    """
+    seed_path = tmp_path / "seed.jsonl"
+    seed_path.write_text(
         '{"id":"x","category":"polyphone","text":"a","phonemes":["a"],'
-        '"accent":["H"],"accent_phrase_boundaries":[]}\n',
+        '"accent":["H"],"accent_phrase_boundaries":[],"notes":"curation memo"}\n',
+        encoding="utf-8",
+    )
+
+    def prediction_fn(text: str) -> tuple[str, ...]:
+        return ("a",)
+
+    # Should not raise — adapter turns curation fields into Row schema.
+    result = score_hardset(prediction_fn, seed_path)
+    # score_hardset returns {category -> run_eval-result}
+    assert result["polyphone"]["aggregate"]["n_rows"] == 1
+
+
+def test_score_hardset_rejects_truly_malformed_fixture(tmp_path: Path) -> None:
+    """The adapter must still catch schemas that are genuinely broken (missing required fields)."""
+    bad_path = tmp_path / "malformed.jsonl"
+    bad_path.write_text(
+        '{"category":"polyphone","phonemes":["a"]}\n',
         encoding="utf-8",
     )
 
