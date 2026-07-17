@@ -44,7 +44,7 @@ baselines = [
     "tqdm>=4.66",
 ]
 training = [
-    "torch>=2.1",
+    "torch>=2.13.0",
     "transformers>=4.48",
     "wandb",
     "omegaconf",
