@@ -30,6 +30,9 @@ classifiers = [
 # `baselines` optional extra に切り出し、unit CI を軽量に保つ。
 dependencies = [
     "pyyaml>=6.0",
+    # modernbert_g2p.evaluation.bootstrap (pure-numpy bootstrap CI) imports
+    # numpy at module level, so the evaluation package needs it at runtime.
+    "numpy>=1.22",
 ]
 
 [project.optional-dependencies]

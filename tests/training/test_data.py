@@ -434,7 +434,7 @@ def test_pc_collator_empty_slot_labeled_with_pad_class_zero() -> None:
     Now each char position must contain at least one pad-class-0 label whenever
     the real phoneme count is < max_slot.
     """
-    torch = _torch()
+    _torch()
     tok = _FakePCTokenizer()
     coll = PCCollator(tok)
     # A single char (桜) with 6 phonemes → slots [s,a,k,u,r,a, 0, 0] (last 2 are pad-class-0)
