@@ -14,6 +14,8 @@ from modernbert_g2p.data.schema import Row
 CATEGORY_WEIGHTS: Mapping[str, float] = MappingProxyType({
     "general": 1.0,
     "numeric_unit": 2.0,
+    # seed_v2 umbrella tag (schema.KNOWN_CATEGORIES); same weight as its split.
+    "proper_noun": 2.0,
     "proper_noun_kanji": 2.0,
     "proper_noun_katakana": 2.0,
     "counter": 2.0,
