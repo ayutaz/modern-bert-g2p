@@ -94,7 +94,7 @@ Wikipedia は並列 ingest infra、Aozora は per-ruby emission (per-file → pe
 ```bash
 uv venv --python 3.12 .venv
 source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv pip install -e ".[dev,baselines]"   # haqumei / pyopenjtalk-plus は baselines extra
 
 # JSUT-label を取得
 git clone --depth 1 https://github.com/prj-beatrice/jsut-label.git
@@ -109,19 +109,20 @@ JSUT_YAML=./jsut-label/text_kana/basic5000.yaml \
 ### 2. Phase 2 pilot 学習 (GPU 環境)
 
 ```bash
-uv pip install -e ".[training]"
+uv pip install -e ".[training,pipeline]"   # Parquet 読み込みに pyarrow (pipeline extra) が必要
 
 # seq2seq (30K steps)
-python -m modernbert_g2p.train --config configs/p_a_30k.yaml --seed 20260706
+python -m modernbert_g2p train --config configs/p_a_30k.yaml --seed 20260706
 
 # char-BERT (30K steps)
-python -m modernbert_g2p.train --config configs/p_c_30k_v2.yaml --seed 20260706
+python -m modernbert_g2p train --config configs/p_c_30k_v2.yaml --seed 20260706
 ```
 
 ### 3. 評価
 
 ```bash
-python -m modernbert_g2p.evaluate --checkpoint runs/p_a_20260706/step_30000.pt \
+python -m modernbert_g2p eval --pilot P-A --config configs/p_a_30k.yaml \
+  --checkpoint reports/phase2/p_a_30k/20260706/checkpoint_step_30000.pt \
   --dataset jsut --output reports/phase2/eval/p_a_20260706_jsut.json
 ```
 
@@ -147,7 +148,7 @@ pytest -q
 - ROHAN 4600 (4600 文): kana KER
 - hard-set seed_v2 (140 文、7 カテゴリ × 20): PER (per-category)
 
-JVS / ROHAN 用に、モデルの JULIUS phoneme 出力を katakana に変換する converter (`src/modernbert_g2p/evaluation/phoneme_to_kana.py`) を実装しています。CV / digraph / palatalized 音素、moraic N (ン)、geminate q (ッ)、長音 (ー) をカバーする state machine で、unit test 29 ケース全て pass しています。
+JVS / ROHAN 用に、モデルの JULIUS phoneme 出力を katakana に変換する converter (`src/modernbert_g2p/evaluation/phoneme_to_kana.py`) を実装しています。CV / digraph / palatalized 音素、moraic N (ン)、geminate q (ッ)、長音 (ー) をカバーする state machine で、unit test 26 ケース全て pass しています。
 
 ## ディレクトリ構造
 
@@ -159,14 +160,14 @@ modern-bert-g2p/
 │   ├── training/                # 学習ループ + collator
 │   ├── evaluation/              # phoneme_to_kana converter
 │   └── data/                    # 5-source データパイプライン
-├── tests/                       # pytest スイート (282 tests)
+├── tests/                       # pytest スイート (529 tests)
 ├── scripts/                     # baseline 測定・データ生成の CLI
 ├── configs/                     # Phase 2 pilot YAML (p_a_30k / p_c_30k_v2 等)
 ├── docs/
 │   ├── requirements.md          # 要求定義書 (FR/NFR/CR/AC)
 │   ├── research/                # 9 本の技術ドキュメント
 │   └── design/                  # Phase 別実装設計
-├── reports/phase2/eval/         # Phase 2 全 eval JSON (47 files)
+├── reports/phase2/eval/         # Phase 2 全 eval JSON (50 files)
 ├── data/                        # (gitignored) raw / processed
 ├── pyproject.toml
 └── README.md
@@ -174,10 +175,13 @@ modern-bert-g2p/
 
 ## 依存関係
 
-`pyproject.toml` で 3 つに分離しています。
+`pyproject.toml` でランタイムと optional extras に分離しています。
 
-- ランタイム (`dependencies`): `pyyaml`, `haqumei==0.8.0`, `pyopenjtalk` — 評価と baseline 測定に必要な最小構成
-- 学習 (`optional-dependencies.training`): `torch>=2.11`, `transformers>=5.13`, `wandb`, `omegaconf`, `fugashi[unidic]` — Phase 2 以降で使用
+- ランタイム (`dependencies`): `pyyaml`, `numpy` — metrics / evaluation に必要な最小構成
+- baseline (`optional-dependencies.baselines`): `haqumei==0.8.0`, `pyopenjtalk-plus`, `jiwer>=3`, `tqdm` — `scripts/eval_*.py` の baseline 測定で使用
+- 学習 (`optional-dependencies.training`): `torch>=2.1`, `transformers>=4.48`, `wandb`, `omegaconf`, `fugashi[unidic]` — Phase 2 以降で使用 (`uv.lock` の解決版は torch 2.12.1 / transformers 5.13.0)
+- Phase 2 前処理 (`optional-dependencies.phase2`): `fugashi>=1.3`, `unidic-lite>=1.0`
+- データパイプライン (`optional-dependencies.pipeline`): `pyarrow>=15`, `lxml>=5` — Parquet 入出力
 - 開発 (`optional-dependencies.dev`): `pytest>=8`, `ruff`, `mypy`, `ipython`
 
 Python サポート: `>=3.10,<3.13` (haqumei 0.8.0 は 3.13/3.14 未対応)。
@@ -222,6 +226,6 @@ Python サポート: `>=3.10,<3.13` (haqumei 0.8.0 は 3.13/3.14 未対応)。
 
 ## License
 
-Apache License 2.0 (予定、`LICENSE` ファイル追加時に確定)。
+Apache License 2.0 ([`LICENSE`](LICENSE))。
 
 学習・評価に用いる第三者データセット (pyopenjtalk-plus 辞書, UniDic, JSUT, ROHAN, JMDict, Wikipedia 等) はそれぞれ別ライセンス (BSD / MIT / CC-BY-4.0 / CC-BY-SA-4.0 等) が適用されます。特に Share-Alike 系ライセンスは重み配布時に影響するため、重み公開前に一次資料の再確認が必要です。

@@ -179,8 +179,15 @@ def cmd_train(args: argparse.Namespace) -> int:
         return 2
 
     seed = args.seed
-    output_dir = args.output_dir or getattr(cfg, "output_dir", Path("reports/phase2/run"))
-    output_dir = Path(output_dir)
+    if args.output_dir is not None:
+        output_dir = Path(args.output_dir)
+    else:
+        # Config output_dir is a template (e.g. "reports/phase2/p_a_30k/{seed}",
+        # default "reports/phase2/{pilot}/{seed}"); expand the placeholders so
+        # checkpoints do not land in a literal "{seed}" directory.
+        template = str(getattr(cfg, "output_dir", "reports/phase2/run"))
+        pilot = str(getattr(cfg, "pilot", ""))
+        output_dir = Path(template.replace("{seed}", str(seed)).replace("{pilot}", pilot))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.smoke:

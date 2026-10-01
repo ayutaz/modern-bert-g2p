@@ -218,6 +218,40 @@ def test_main_train_smoke_uses_build_smoke_pipeline(
     assert fake_trainer.calls == [1]
 
 
+def test_main_train_expands_output_dir_template_from_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Without --output-dir, ``{seed}`` / ``{pilot}`` in config.output_dir are expanded."""
+    from modernbert_g2p import cli as cli_mod
+
+    cfg_yaml = tmp_path / "fake.yaml"
+    cfg_yaml.write_text("pilot: P-A\n", encoding="utf-8")
+
+    class _FakeCfg:
+        pilot = "P-A"
+        output_dir = str(tmp_path / "runs" / "{pilot}" / "{seed}")
+
+    fake_config_mod = type(sys)("modernbert_g2p.config")
+    fake_config_mod.load_config = lambda path: _FakeCfg()  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "modernbert_g2p.config", fake_config_mod)
+
+    seen: dict[str, Path] = {}
+
+    def _fake_full(cfg: object, *, seed: int, output_dir: Path) -> int:
+        seen["output_dir"] = output_dir
+        return 0
+
+    monkeypatch.setattr(cli_mod, "_run_train_full", _fake_full)
+
+    rc = cli_mod.main(["train", "--config", str(cfg_yaml), "--seed", "20260706"])
+
+    assert rc == 0
+    expected = tmp_path / "runs" / "P-A" / "20260706"
+    assert seen["output_dir"] == expected
+    assert expected.is_dir()
+    assert not (tmp_path / "runs" / "{pilot}").exists()
+
+
 def test_smoke_shell_script_exists_and_executable() -> None:
     assert SMOKE_SCRIPT.is_file()
     assert os.access(SMOKE_SCRIPT, os.X_OK)
